@@ -1,0 +1,13 @@
+CHANGELOG.md
+README.md
+.vscode/
+node_modules
+main.js
+main.test.js
+*.js.map
+test/
+tests_jest/
+data.json
+resources/
+build
+coverage

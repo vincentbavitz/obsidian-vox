@@ -1,0 +1,27 @@
+app
+
+## VSCode
+.vscode/
+
+# npm
+node_modules
+
+# build
+main.js
+main.test.js
+*.js.map
+
+# test
+test/
+tests_jest/
+
+# Obsidian
+data.json
+.hotreload
+resources/
+
+# Other
+RESOURCES.md
+
+# Thumbnails
+._*
