@@ -1,6 +1,6 @@
 {
   "name": "obsidian-vox",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "vincentbavitz",
   "license": "AGPL-3.0-only",
   "description": "Intelligently create transcripts of voice memos",
