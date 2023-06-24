@@ -12,7 +12,7 @@ The *unprocessed* directory is watched for new files; upon discovering a new fil
 
 Voice memos are a very convenient and efficient medium to formulate and explicate your ideas. However they suffer from the major drawback that they are not plaintext and cannot be indexed, searched, sorted or categorized.
 
-As your collection of raw of voice notes grows, your ability to search through them for important information shrinks. An enormous directory of thousands of audio files is no way to organise our notes. VOX solves this problem by pulling out the important information from your voice notes and intelligently categorizing them (see #Categorization below).
+As your collection of raw voice notes grows, your ability to search through them for important information shrinks. An enormous directory of thousands of audio files is no way to organise our notes. VOX solves this problem by pulling out the important information from your voice notes and intelligently categorizing them (see #Categorization below).
 
 ## Instructions
 
@@ -26,7 +26,7 @@ See [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend
 
 1. Enable VOX in Obsidian plugins
 2. Update the plugin settings to suit your input/output folders for your voice notes.
-3. Move a voice note over to your watch dircetory (eg `<Vault>/Voice/unprocessed`) as a test file
+3. Move a voice note over to your watch directory (eg `<Vault>/Voice/unprocessed`) as a test file
 
 #### Example Setup - Mobile Only
 
@@ -97,7 +97,7 @@ Git integration will be a major pillar of VOX - the integration will ensure that
 
 #### Free & Fully Hosted Backend
 
-VOX is all about simplicity and time saving - therefore in the near future it will be hosted on an auto-scaling dedicated backend with auto-scaling and GPU acceleration. The dedicated backend would add extremely fast transcriptions and would hold data in memory alone. But for those would prefer to run things themselves, the option will remain to use your own backend.
+VOX is all about simplicity and time saving - therefore in the near future it will be hosted on a dedicated backend with auto-scaling and GPU acceleration. The dedicated backend would add extremely fast transcriptions and would hold data in memory alone. But for those would prefer to run things themselves, the option will remain to use your own backend.
 
 #### Built In Audio Recorder
 
