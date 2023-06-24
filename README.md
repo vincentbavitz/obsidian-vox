@@ -30,13 +30,13 @@ See [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend
 
 #### Example Setup - Mobile Only
 
-> - Phone records voice memos using a voice recorder app, saving the files to `<mobile>/path/to/obsidian/your/watch/folder
+> - Phone records voice memos using a voice recorder app, saving the files to `<mobile>/path/to/obsidian/your/watch/folder`
 > - Mobile Obsidian app transcribes the voice notes
 
 #### Example Setup - Mobile First Desktop Sync
 
 > - Phone records voice memos using voice recorder app saving to a location on the phone
-> - Using RSync or Syncthing or another synchronisation tool, phone syncs voice notes to `<desktop>/path/to/obsidian/your/watch/folder
+> - Using RSync or Syncthing or another synchronisation tool, phone syncs voice notes to `<desktop>/path/to/obsidian/your/watch/folder`
 > - Desktop Obsidian app transcribes the voice notes
 
 #### Example Setup - Desktop First
@@ -102,12 +102,6 @@ VOX is all about simplicity and time saving - therefore in the near future it wi
 #### Built In Audio Recorder
 
 A built in audio recorder would prompt users for the voice note category and importance rating after a voice note is made, then automatically transcribe it and place it in the right place in their Vault.
-
-
-~~~
-## Git Integration (Experimental)
-If you're using [obsidian-git](https://github.com/denolehov/obsidian-git), you can automatically commit your transcriptions; turn it on in the settings.
-~~~
 
 ## Self Hosting
 
