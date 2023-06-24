@@ -5,7 +5,7 @@ import path from "path";
 import { Settings } from "settings";
 import { FileDetail } from "types";
 import { extractFileDetail, getFileCreationDateTime } from "utils/format";
-import { log } from "utils/various";
+import { Logger, } from "utils/log";
 import {
   CATEGORY_REGEX_LEGACY,
   FILENAME_DATE_FORMAT,
@@ -13,7 +13,7 @@ import {
 } from "../constants";
 
 export class AudioProcessor {
-  constructor(private readonly vault: Vault, private settings: Settings) {}
+  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
 
   /**
    * Converts a voice note to the desired extension, and
@@ -43,7 +43,7 @@ export class AudioProcessor {
     const shouldConvertFile = audioFile.extension !== desiredExtension;
 
     if (shouldConvertFile) {
-      log(`Converting audio file: "${audioFile.filename}"`);
+      this.logger.log(`Converting audio file: "${audioFile.filename}"`);
 
       const url = `${this.settings.backendHost}/convert/audio`;
       const mimetype = `audio/${this.settings.audioOutputExtension}`;

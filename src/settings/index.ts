@@ -65,23 +65,23 @@ export class VoxSettingTab extends PluginSettingTab {
   display(): void {
     this.containerEl.empty();
 
-    this.addSettingsCategoryHeading("General Settings");
+    this.addCategoryHeading("General Settings");
 
-    this.addSelfHostLocationSetting();
-    this.addWatchDirectorySetting();
-    this.addTranscriptionsDirectorySetting();
+    this.addSelfHostLocation();
+    this.addWatchDirectory();
+    this.addTranscriptionsDirectory();
 
-    this.addAudioExtensionSetting();
-    this.addDeleteOriginalFileSetting();
+    this.addAudioExtension();
+    this.addDeleteOriginalFile();
 
     // Ready for Version 2
-    // this.addShouldCommitGitSetting();
+    // this.addShouldCommitGit();
 
-    this.addTagSettings();
-    this.addCategorisationSettings();
+    this.addTags();
+    this.addCategorisation();
   }
 
-  addSettingsCategoryHeading(category: string, margin = false): void {
+  addCategoryHeading(category: string, margin = false): void {
     const headingEl = this.containerEl.createEl("h2", { text: category });
 
     if (margin) {
@@ -89,7 +89,7 @@ export class VoxSettingTab extends PluginSettingTab {
     }
   }
 
-  addSelfHostLocationSetting(): void {
+  addSelfHostLocation(): void {
     const description = document.createDocumentFragment();
     description.append(
       "The location of your self-hosted back-end; supports IP addresses and hostnames.",
@@ -114,7 +114,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addWatchDirectorySetting(): void {
+  addWatchDirectory(): void {
     new Setting(this.containerEl)
       .setName("Watch Location")
       .setDesc(
@@ -131,7 +131,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addTranscriptionsDirectorySetting(): void {
+  addTranscriptionsDirectory(): void {
     new Setting(this.containerEl)
       .setName("Transcriptions Output Location")
       .setDesc("Your completed transcriptions will be placed in this folder")
@@ -146,7 +146,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addAudioExtensionSetting(): void {
+  addAudioExtension(): void {
     new Setting(this.containerEl)
       .setName("Audio Output Extension")
       .setDesc(
@@ -169,7 +169,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addDeleteOriginalFileSetting(): void {
+  addDeleteOriginalFile(): void {
     const description = document.createDocumentFragment();
     description.append(
       "When enabled, remove the original file from the watch directory.",
@@ -190,7 +190,7 @@ export class VoxSettingTab extends PluginSettingTab {
   }
 
   // Ready for Version 2
-  // addShouldCommitGitSetting(): void {
+  // addShouldCommitGit(): void {
   //   const description = document.createDocumentFragment();
   //   description.append(
   //     "When enabled, completed transcriptions will be automatically committed to your repository.",
@@ -223,8 +223,8 @@ export class VoxSettingTab extends PluginSettingTab {
     });
   }
 
-  addTagSettings(): void {
-    this.addSettingsCategoryHeading("Tag Extraction", true);
+  addTags(): void {
+    this.addCategoryHeading("Tag Extraction", true);
 
     new Setting(this.containerEl)
       .setName("Enable Tag Extraction")
@@ -242,14 +242,14 @@ export class VoxSettingTab extends PluginSettingTab {
         });
       });
 
-    this.addTagLimitSetting(), this.addTagsListSetting();
+    this.addTagLimit(), this.addTagsList();
     this.toggleSettingsVisibility(
       TAG_SETTINGS_CLASS,
       this.plugin.settings.shouldExtractTags
     );
   }
 
-  addTagLimitSetting(): Setting {
+  addTagLimit(): Setting {
     return new Setting(this.containerEl)
       .setName("Tag Limit")
       .setClass(TAG_SETTINGS_CLASS)
@@ -290,7 +290,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addTagsListSetting(): Setting {
+  addTagsList(): Setting {
     return new Setting(this.containerEl)
       .setName("Custom Tags")
       .setClass(TAG_SETTINGS_CLASS)
@@ -322,8 +322,8 @@ export class VoxSettingTab extends PluginSettingTab {
       });
   }
 
-  addCategorisationSettings() {
-    this.addSettingsCategoryHeading("Filename Categorisation", true);
+  addCategorisation() {
+    this.addCategoryHeading("Filename Categorisation", true);
 
     new Setting(this.containerEl)
       .setName("Enable Filename Categorisation")
@@ -346,7 +346,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
 
     this.addCategoryMapExample();
-    this.addCategoryMapSetting();
+    this.addCategoryMap();
 
     this.toggleSettingsVisibility(
       CATEGORIZATION_SETTINGS_CLASS,
@@ -495,7 +495,7 @@ export class VoxSettingTab extends PluginSettingTab {
     }
   }
 
-  addCategoryMapSetting(): void {
+  addCategoryMap(): void {
     Object.entries(this.plugin.settings.categoryMap).forEach((entry, index) => {
       this.addCategoryMapRow(entry[0], entry[1], index);
     });

@@ -5,7 +5,7 @@ import { App, Notice } from "obsidian";
 import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
 import { extractFileDetail } from "utils/format";
-import { log } from "utils/various";
+import { Logger } from "utils/log";
 import { Settings } from "../settings";
 
 const ONE_MINUTE_IN_MS = 60_000;
@@ -18,13 +18,13 @@ export class TranscriptionProcessor {
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
 
-  constructor(private readonly app: App, private settings: Settings) {
-    this.markdownProcessor = new MarkdownProcessor(app.vault, settings);
-    this.audioProcessor = new AudioProcessor(app.vault, settings);
+  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {
+    this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
+    this.audioProcessor = new AudioProcessor(app.vault, settings, logger);
 
     this.queue = new PQueue({ concurrency: 4 });
 
-    // What if this setting changes? Requires restart?
+    // What if this setting changes? Requires restart?s
     // this.queue.on('idle', )
   }
 
@@ -50,7 +50,7 @@ export class TranscriptionProcessor {
         );
 
       if (isAlreadyTranscribed) {
-        log(`Already transcribed "${audioFileDetail.filename}" — skipping`);
+        this.logger.log(`Already transcribed "${audioFileDetail.filename}" — skipping`);
         continue;
       }
 
@@ -90,7 +90,7 @@ export class TranscriptionProcessor {
         await this.consolidateFiles(audioFile, processedAudio, markdown);
 
         const notice = `Transcription complete: ${markdown.title}`;
-        log(notice);
+        this.logger.log(notice);
         new Notice(notice);
 
         // Ready for Version 2

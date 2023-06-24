@@ -6,8 +6,8 @@ import { Settings } from "settings";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
 import { categorizeVoiceMemo } from "utils/categorize";
 import { getFileCreationDateTime } from "utils/format";
+import { Logger, } from "utils/log";
 import { extractTags } from "utils/tags";
-import { log } from "utils/various";
 import {
   CATEGORY_REGEX_LEGACY,
   MARKDOWN_DATE_FORMAT,
@@ -16,7 +16,7 @@ import {
 } from "../constants";
 
 export class MarkdownProcessor {
-  constructor(private readonly vault: Vault, private settings: Settings) {}
+  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
 
   /**
    * Generate markdown content, given a transcription.
@@ -26,7 +26,7 @@ export class MarkdownProcessor {
     processedAudio: FileDetail,
     transcription: TranscriptionResponse
   ): Promise<MarkdownOutput> {
-    log(`Generating markdown content: ${originalFile.filename}`);
+    this.logger.log(`Generating markdown content: ${originalFile.filename}`);
 
     const fileCreationTime = await getFileCreationDateTime(
       originalFile,
