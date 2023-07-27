@@ -80,6 +80,10 @@ You may set your own categorization map in the settings - the sky's the limit!
 
 ## Roadmap
 
+#### Status Panel
+
+A status panel will provide information about which items are currently being transcribed, which are queued and any errors, incl. any further information.
+
 #### Templates
 
 Allowing users to build their own templates using shortcodes such as `{{ tags }}`, `{{ transcript }}`, `{{ category }}`.
