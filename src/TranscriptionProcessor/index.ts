@@ -18,7 +18,11 @@ export class TranscriptionProcessor {
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
 
-  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {
+  constructor(
+    private readonly app: App,
+    private settings: Settings,
+    private readonly logger: Logger
+  ) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
     this.audioProcessor = new AudioProcessor(app.vault, settings, logger);
 
@@ -50,7 +54,9 @@ export class TranscriptionProcessor {
         );
 
       if (isAlreadyTranscribed) {
-        this.logger.log(`Already transcribed "${audioFileDetail.filename}" — skipping`);
+        this.logger.log(
+          `Already transcribed "${audioFileDetail.filename}" — skipping`
+        );
         continue;
       }
 
