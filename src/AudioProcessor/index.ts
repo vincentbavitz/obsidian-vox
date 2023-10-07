@@ -51,8 +51,11 @@ export class AudioProcessor {
     if (shouldConvertFile) {
       this.logger.log(`Converting audio file: "${audioFile.filename}"`);
 
-      // const url = `${this.settings.backendHost}/convert/audio`;
-      const url = `${PUBLIC_API_ENDPOINT}/convert/audio`;
+      const host = this.settings.isSelfHosted
+        ? this.settings.selfHostedEndpoint
+        : PUBLIC_API_ENDPOINT;
+
+      const url = `${host}/convert/audio`;
 
       const mimetype = `audio/${this.settings.audioOutputExtension}`;
 

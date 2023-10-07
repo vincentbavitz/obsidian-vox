@@ -1,14 +1,17 @@
 import TemplaterPlugin from "main";
 import { PluginSettingTab, Setting, TextComponent, getIcon } from "obsidian";
 import { AudioOutputExtension } from "types";
+import { VALID_HOST_REGEX } from "../constants";
 import { FolderSuggest } from "./suggesters/FolderSuggester";
 
 const TAG_SETTINGS_CLASS = "st-tag-setting";
 const CATEGORIZATION_SETTINGS_CLASS = "st-cate-setting";
+const SELF_HOSTING_CLASS = "self-host-setting";
 const HIDDEN_CLASS = "st-hidden";
 
 export interface Settings {
-  backendHost: string;
+  isSelfHosted: boolean;
+  selfHostedEndpoint: string;
 
   watchDirectory: string;
   outputDirectory: string;
@@ -31,9 +34,10 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  // shouldUseSelfHostedBackend: <-- Defaults to true for now.
   // apiKey: <-- For when paid option is available.
-  backendHost: "192.168.0.32:3333",
+
+  isSelfHosted: false,
+  selfHostedEndpoint: "",
 
   audioOutputExtension: AudioOutputExtension.MP3,
   outputDirectory: "Voice",
@@ -67,8 +71,6 @@ export class VoxSettingTab extends PluginSettingTab {
 
     this.addCategoryHeading("General Settings");
 
-    // Self hosting will be ready in the next version.
-    // this.addSelfHostLocation();
     this.addWatchDirectory();
     this.addTranscriptionsDirectory();
 
@@ -80,6 +82,8 @@ export class VoxSettingTab extends PluginSettingTab {
 
     this.addTags();
     this.addCategorisation();
+
+    this.addSelfHostToggle();
   }
 
   addCategoryHeading(category: string, margin = false): void {
@@ -88,31 +92,6 @@ export class VoxSettingTab extends PluginSettingTab {
     if (margin) {
       headingEl.style.marginTop = "1.5rem";
     }
-  }
-
-  addSelfHostLocation(): void {
-    const description = document.createDocumentFragment();
-    description.append(
-      "The location of your self-hosted back-end; supports IP addresses and hostnames.",
-      description.createEl("br"),
-      "Please remember to inclued your protocol; ",
-      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
-      "or",
-      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
-      "."
-    );
-
-    new Setting(this.containerEl)
-      .setName("Self Hosted Backend Location")
-      .setDesc(description)
-      .addText((cb) => {
-        cb.setPlaceholder("http://10.0.0.1");
-        cb.setValue(this.plugin.settings.backendHost);
-        cb.onChange((newHost) => {
-          this.plugin.settings.backendHost = newHost;
-          this.plugin.saveSettings();
-        });
-      });
   }
 
   addWatchDirectory(): void {
@@ -189,32 +168,6 @@ export class VoxSettingTab extends PluginSettingTab {
         });
       });
   }
-
-  // Ready for Version 2
-  // addShouldCommitGit(): void {
-  //   const description = document.createDocumentFragment();
-  //   description.append(
-  //     "When enabled, completed transcriptions will be automatically committed to your repository.",
-  //     description.createEl("br"),
-  //     "This setting requires ",
-  //     description.createEl("a", {
-  //       href: "https://github.com/denolehov/obsidian-git",
-  //       text: "obsidian-git",
-  //     }),
-  //     " in order to funcion."
-  //   );
-
-  //   new Setting(this.containerEl)
-  //     .setName("Enable Git")
-  //     .setDesc(description)
-  //     .addToggle((cb) => {
-  //       cb.setValue(this.plugin.settings.shouldCommitChanges);
-  //       cb.onChange((shouldCommit) => {
-  //         this.plugin.settings.shouldCommitChanges = shouldCommit;
-  //         this.plugin.saveSettings();
-  //       });
-  //     });
-  // }
 
   toggleSettingsVisibility(className: string, on: boolean) {
     const items = document.getElementsByClassName(className);
@@ -328,7 +281,6 @@ export class VoxSettingTab extends PluginSettingTab {
 
     new Setting(this.containerEl)
       .setName("Enable Filename Categorisation")
-
       .setDesc(
         "Categorise your transcriptions depending on the audio's filename prefix. Please see the plugin homepage for more information."
       )
@@ -550,5 +502,67 @@ export class VoxSettingTab extends PluginSettingTab {
     }
 
     categoryMapSetting.infoEl.remove();
+  }
+
+  addSelfHostToggle(): void {
+    new Setting(this.containerEl)
+      .setName("Use Self-Hosted Backend")
+      .addToggle((cb) => {
+        cb.setValue(this.plugin.settings.isSelfHosted);
+        cb.onChange((selfHosted) => {
+          this.plugin.settings.isSelfHosted = selfHosted;
+          this.plugin.saveSettings();
+
+          this.toggleSettingsVisibility(SELF_HOSTING_CLASS, selfHosted);
+        });
+      });
+
+    this.addSelfHostLocation();
+
+    this.toggleSettingsVisibility(
+      SELF_HOSTING_CLASS,
+      this.plugin.settings.isSelfHosted
+    );
+  }
+
+  addSelfHostLocation(): void {
+    const description = document.createDocumentFragment();
+    description.append(
+      "The location of your self-hosted back-end; supports IP addresses and hostnames.",
+      description.createEl("br"),
+      "Please remember to inclued your protocol; ",
+      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
+      "or",
+      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
+      " and port; ",
+      description.createEl("code", { text: "1337", cls: "st-inline-code" }),
+      "."
+    );
+
+    const containerEl = this.containerEl.createEl("div", {
+      cls: [SELF_HOSTING_CLASS],
+    });
+
+    new Setting(containerEl)
+      .setName("Self Hosted Backend Location")
+      .setDesc(description)
+      .addText((cb) => {
+        if (!this.plugin.settings.selfHostedEndpoint.match(VALID_HOST_REGEX)) {
+          cb.inputEl.style.borderColor = "red";
+        }
+
+        cb.setPlaceholder("http://10.0.0.1:1337");
+        cb.setValue(this.plugin.settings.selfHostedEndpoint);
+        cb.onChange((newHost) => {
+          if (newHost.match(VALID_HOST_REGEX)) {
+            cb.inputEl.style.borderColor = "unset";
+
+            this.plugin.settings.selfHostedEndpoint = newHost;
+            this.plugin.saveSettings();
+          } else {
+            cb.inputEl.style.borderColor = "red";
+          }
+        });
+      });
   }
 }

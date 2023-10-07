@@ -119,8 +119,11 @@ export class TranscriptionProcessor {
   private async transcribe(
     audioFile: FileDetail
   ): Promise<TranscriptionResponse | null> {
-    // const url = `${this.settings.backendHost}/transcribe`;
-    const url = `${PUBLIC_API_ENDPOINT}/transcribe`;
+    const host = this.settings.isSelfHosted
+      ? this.settings.selfHostedEndpoint
+      : PUBLIC_API_ENDPOINT;
+
+    const url = `${host}/transcribe`;
 
     const mimetype = `audio/${audioFile.extension.replace(".", "")}`;
 

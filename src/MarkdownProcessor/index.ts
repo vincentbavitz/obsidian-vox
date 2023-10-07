@@ -137,6 +137,11 @@ export class MarkdownProcessor {
   private objectifySegment(
     segment: RawTranscriptionSegment
   ): TranscriptionSegment {
+    // Small snippets can be returned as TranscriptionSegment from the API.
+    if (segment.hasOwnProperty("text")) {
+      return segment as never as TranscriptionSegment;
+    }
+
     return {
       id: segment[0],
       seek: segment[1],

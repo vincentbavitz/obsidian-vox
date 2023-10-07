@@ -6,6 +6,11 @@ export const FILENAME_DATE_FORMAT = "yyyyMMdd-hh:mm";
 export const MARKDOWN_DATE_FORMAT = "yyyy-MM-dd hh:mm";
 export const GIT_COMMMIT_DATE_FORMAT = "yyyy-MM-dd hh:mm";
 
+export const VALID_HOST_REGEX = new RegExp(
+  "^http(s)?://[a-z0-9-]*.[a-z0-9-]*.?([a-z0-9-]*)?.?([a-z0-9-]*)?:[0-9]{2,6}$",
+  "gmi"
+);
+
 /**
  * The location that audio files are stored at relative
  * to the output markdown file
