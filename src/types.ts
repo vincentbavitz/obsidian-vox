@@ -15,6 +15,7 @@ type ObsidianGitPlugin = Plugin & {
 
 declare module "obsidian" {
   interface App {
+    appId: string;
     dom: {
       appContainerEl: HTMLElement;
     };
@@ -43,6 +44,19 @@ declare module "obsidian" {
   }
 }
 
+export type RawTranscriptionSegment = [
+  number, // id
+  number, // seek
+  number, // start
+  number, // end
+  string, // text
+  number[], // tokens
+  number, // temperature
+  number, // avg_logprob
+  number, // compression_ratio
+  number // no_speech_prob
+];
+
 export type TranscriptionSegment = {
   id: number;
   seek: number;
@@ -59,7 +73,7 @@ export type TranscriptionSegment = {
 export type TranscriptionResponse = {
   text: string;
   language: string;
-  segments: TranscriptionSegment[];
+  segments: RawTranscriptionSegment[];
 };
 
 export type FileDetail = {

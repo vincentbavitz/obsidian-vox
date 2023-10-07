@@ -5,15 +5,21 @@ import path from "path";
 import { Settings } from "settings";
 import { FileDetail } from "types";
 import { extractFileDetail, getFileCreationDateTime } from "utils/format";
-import { Logger, } from "utils/log";
+import { Logger } from "utils/log";
 import {
   CATEGORY_REGEX_LEGACY,
   FILENAME_DATE_FORMAT,
+  PUBLIC_API_ENDPOINT,
   generateCategoryRegex,
 } from "../constants";
 
 export class AudioProcessor {
-  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
+  constructor(
+    private readonly appId: string,
+    private readonly vault: Vault,
+    private settings: Settings,
+    private readonly logger: Logger
+  ) {}
 
   /**
    * Converts a voice note to the desired extension, and
@@ -45,7 +51,9 @@ export class AudioProcessor {
     if (shouldConvertFile) {
       this.logger.log(`Converting audio file: "${audioFile.filename}"`);
 
-      const url = `${this.settings.backendHost}/convert/audio`;
+      // const url = `${this.settings.backendHost}/convert/audio`;
+      const url = `${PUBLIC_API_ENDPOINT}/convert/audio`;
+
       const mimetype = `audio/${this.settings.audioOutputExtension}`;
 
       const audioBinary = await this.vault.adapter.readBinary(
@@ -64,15 +72,23 @@ export class AudioProcessor {
           audio_file: audioBlobFile,
         },
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "obsidian-vault-id": this.appId,
+          },
           responseType: "arraybuffer",
         }
       );
 
       if (!response.data || response.status !== 200) {
-        new Notice("There was an error converting audio during transcription.");
+        const error =
+          "There was an error converting audio during transcription.";
+
+        new Notice(error);
+        throw new Error(error);
       }
 
+      await this.vault.adapter.mkdir(outputFileDetail.directory);
       await this.vault.adapter.writeBinary(
         outputFileDetail.filepath,
         response.data

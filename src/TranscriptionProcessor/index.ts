@@ -6,6 +6,7 @@ import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
+import { PUBLIC_API_ENDPOINT } from "../constants";
 import { Settings } from "../settings";
 
 const ONE_MINUTE_IN_MS = 60_000;
@@ -24,11 +25,16 @@ export class TranscriptionProcessor {
     private readonly logger: Logger
   ) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
-    this.audioProcessor = new AudioProcessor(app.vault, settings, logger);
+    this.audioProcessor = new AudioProcessor(
+      app.appId,
+      app.vault,
+      settings,
+      logger
+    );
 
     this.queue = new PQueue({ concurrency: 4 });
 
-    // What if this setting changes? Requires restart?s
+    // What if this setting changes? Requires restart?
     // this.queue.on('idle', )
   }
 
@@ -54,9 +60,6 @@ export class TranscriptionProcessor {
         );
 
       if (isAlreadyTranscribed) {
-        this.logger.log(
-          `Already transcribed "${audioFileDetail.filename}" — skipping`
-        );
         continue;
       }
 
@@ -64,9 +67,11 @@ export class TranscriptionProcessor {
       items++;
     }
 
-    new Notice(
-      `Added ${items} file${items > 1 ? "s" : ""} to the transcription queue.`
-    );
+    if (items) {
+      new Notice(
+        `Added ${items} file${items > 1 ? "s" : ""} to the transcription queue.`
+      );
+    }
   }
 
   public stop() {
@@ -84,6 +89,8 @@ export class TranscriptionProcessor {
         audioFile
       );
 
+      console.log("index ➡️ processedAudio:", processedAudio);
+
       const transcribed = await this.transcribe(processedAudio);
 
       if (transcribed && transcribed.segments) {
@@ -98,19 +105,6 @@ export class TranscriptionProcessor {
         const notice = `Transcription complete: ${markdown.title}`;
         this.logger.log(notice);
         new Notice(notice);
-
-        // Ready for Version 2
-        // Commit through Git if user desires
-        // if (
-        //   this.settings.shouldCommitChanges &&
-        //   this.app.plugins.enabledPlugins.has("obsidian-git")
-        // ) {
-        //   const obsidianGitPlugin = this.app.plugins.plugins["obsidian-git"];
-
-        //   if (obsidianGitPlugin?.gitManager.git) {
-        //     alert("committing changes (mock)");
-        //   }
-        // }
       }
     } catch (error: unknown) {
       console.warn(error);
@@ -118,6 +112,8 @@ export class TranscriptionProcessor {
         new Notice(
           "Error connecting to transcription host. Please check your settings."
         );
+
+        this.queue.pause();
       }
     }
   }
@@ -125,7 +121,9 @@ export class TranscriptionProcessor {
   private async transcribe(
     audioFile: FileDetail
   ): Promise<TranscriptionResponse | null> {
-    const url = `${this.settings.backendHost}/transcribe`;
+    // const url = `${this.settings.backendHost}/transcribe`;
+    const url = `${PUBLIC_API_ENDPOINT}/transcribe`;
+
     const mimetype = `audio/${audioFile.extension.replace(".", "")}`;
 
     const audioBinary = await this.app.vault.adapter.readBinary(
@@ -143,7 +141,10 @@ export class TranscriptionProcessor {
           audio_file: audioBlobFile,
         },
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "obsidian-vault-id": this.app.appId,
+          },
           timeout: 20 * ONE_MINUTE_IN_MS,
           responseType: "json",
         }

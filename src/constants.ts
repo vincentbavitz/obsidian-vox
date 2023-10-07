@@ -1,5 +1,7 @@
 import { Settings } from "settings";
 
+export const PUBLIC_API_ENDPOINT = "https://64.176.214.184:1337";
+
 export const FILENAME_DATE_FORMAT = "yyyyMMdd-hh:mm";
 export const MARKDOWN_DATE_FORMAT = "yyyy-MM-dd hh:mm";
 export const GIT_COMMMIT_DATE_FORMAT = "yyyy-MM-dd hh:mm";

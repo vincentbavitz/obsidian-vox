@@ -67,7 +67,8 @@ export class VoxSettingTab extends PluginSettingTab {
 
     this.addCategoryHeading("General Settings");
 
-    this.addSelfHostLocation();
+    // Self hosting will be ready in the next version.
+    // this.addSelfHostLocation();
     this.addWatchDirectory();
     this.addTranscriptionsDirectory();
 

@@ -3,10 +3,16 @@ import startCase from "lodash/startCase";
 import { DateTime } from "luxon";
 import { Vault } from "obsidian";
 import { Settings } from "settings";
-import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
+import {
+  FileDetail,
+  MarkdownOutput,
+  RawTranscriptionSegment,
+  TranscriptionResponse,
+  TranscriptionSegment,
+} from "types";
 import { categorizeVoiceMemo } from "utils/categorize";
 import { getFileCreationDateTime } from "utils/format";
-import { Logger, } from "utils/log";
+import { Logger } from "utils/log";
 import { extractTags } from "utils/tags";
 import {
   CATEGORY_REGEX_LEGACY,
@@ -16,7 +22,11 @@ import {
 } from "../constants";
 
 export class MarkdownProcessor {
-  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
+  constructor(
+    private readonly vault: Vault,
+    private settings: Settings,
+    private readonly logger: Logger
+  ) {}
 
   /**
    * Generate markdown content, given a transcription.
@@ -64,8 +74,10 @@ export class MarkdownProcessor {
       `![](${RELATIVE_AUDIO_FILE_LOCATION}/${processedAudio.filename})\n\n`
     );
 
+    const segments = transcription.segments.map(this.objectifySegment);
+
     // Every four segments, create a new paragraph.
-    transcription.segments.forEach((segment, i) => {
+    segments.forEach((segment, i) => {
       markdownContent.push(`${segment.text.trim()} `);
 
       // Sensible new paragraph spacing
@@ -120,5 +132,22 @@ export class MarkdownProcessor {
     const title = `${titlePrefix} ${startCase(tidyTitle)}`;
 
     return title;
+  }
+
+  private objectifySegment(
+    segment: RawTranscriptionSegment
+  ): TranscriptionSegment {
+    return {
+      id: segment[0],
+      seek: segment[1],
+      start: segment[2],
+      end: segment[3],
+      text: segment[4],
+      tokens: segment[5],
+      temperature: segment[6],
+      avg_logprob: segment[7],
+      compression_ratio: segment[8],
+      no_speech_prob: segment[9],
+    };
   }
 }
