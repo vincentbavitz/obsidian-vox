@@ -10,6 +10,11 @@ Currently your transcriptions are processed on a remote server I set up specific
 
 My intention is for Vox to be as easy to use as possible - however if you feel more secure running your own backend, this will be possible following versions.
  
+#### Free & Fully Hosted Backend
+
+VOX is all about simplicity and time saving - therefore it's hosted on a dedicated backend with auto-scaling and GPU acceleration. This enables extremely fast transcriptions and remains private by holding data in memory alone. For those would prefer to run things themselves, the option will to use your own backend will be available very soon.
+
+
 
 ## Motivation
 
@@ -19,11 +24,11 @@ As your collection of raw voice notes grows, your ability to search through them
 
 ## Instructions
 
-### Setting Up The Backend
+<!-- ### Setting Up The Backend
 
 See [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend) for detailed setup instructions - then simply update the Obsidian plugin setting "*Self Hosted Backend Location*" to your backend's domain or IP and port. You may also run the backend locally and point your backend to `127.0.0.1:1337`.
 
-> @note - Systems with less than 8GB of memory may struggle when transcribing audio files over 50MB.
+> @note - Systems with less than 8GB of memory may struggle when transcribing audio files over 50MB. -->
 
 ### In Obsidian
 
@@ -91,20 +96,13 @@ A status panel will provide information about which items are currently being tr
 
 Allowing users to build their own templates using shortcodes such as `{{ tags }}`, `{{ transcript }}`, `{{ category }}`.
 
-#### GPT Summaries & Extras
+#### AI Summaries & Extras
 
-In the near-future, VOX will add the open-source and GPT-2 to its backend to fascilitate...
+In the near-future, VOX will add the open-source Llama model to its backend to fascilitate...
 
 - even smarter tag extraction
 - optionally outputting summaries in the transcribed text to get an overview of the topic matter
 
-#### Git Integration
-
-Git integration will be a major pillar of VOX - the integration will ensure that transcribed voice notes are committed to your vault repository without intersecting with your current changes. It would work alongside [obsidian-git](https://github.com/denolehov/obsidian-git).
-
-#### Free & Fully Hosted Backend
-
-VOX is all about simplicity and time saving - therefore in the near future it will be hosted on a dedicated backend with auto-scaling and GPU acceleration. The dedicated backend would add extremely fast transcriptions and would hold data in memory alone. But for those would prefer to run things themselves, the option will remain to use your own backend.
 
 #### Built In Audio Recorder
 

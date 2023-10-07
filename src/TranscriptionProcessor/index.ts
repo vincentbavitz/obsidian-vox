@@ -89,8 +89,6 @@ export class TranscriptionProcessor {
         audioFile
       );
 
-      console.log("index ➡️ processedAudio:", processedAudio);
-
       const transcribed = await this.transcribe(processedAudio);
 
       if (transcribed && transcribed.segments) {
