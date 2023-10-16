@@ -1,6 +1,6 @@
 import { AudioProcessor } from "AudioProcessor";
 import { MarkdownProcessor } from "MarkdownProcessor";
-import axios, { isAxiosError } from "axios";
+import axios, { HttpStatusCode, isAxiosError } from "axios";
 import { App, Notice } from "obsidian";
 import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
@@ -107,9 +107,13 @@ export class TranscriptionProcessor {
     } catch (error: unknown) {
       console.warn(error);
       if (isAxiosError(error)) {
-        new Notice(
-          "Error connecting to transcription host. Please check your settings."
-        );
+        if (error.response?.status === HttpStatusCode.TooManyRequests) {
+          new Notice("You've reached your transcription limit for today.");
+        } else {
+          new Notice(
+            "Error connecting to transcription host. Please check your settings."
+          );
+        }
 
         this.queue.pause();
       }
