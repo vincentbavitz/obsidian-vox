@@ -15,7 +15,6 @@ My intention is for Vox to be as easy to use as possible - however if you feel m
 VOX is all about simplicity and time saving - therefore it's hosted on a dedicated backend with auto-scaling and GPU acceleration. This enables extremely fast transcriptions and remains private by holding data in memory alone. For those would prefer to run things themselves, the option will to use your own backend will be available very soon.
 
 
-
 ## Motivation
 
 Voice memos are a very convenient and efficient medium to formulate and explicate your ideas. However they suffer from the major drawback that they are not plaintext and cannot be indexed, searched, sorted or categorized.

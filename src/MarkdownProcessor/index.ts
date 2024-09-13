@@ -22,11 +22,7 @@ import {
 } from "../constants";
 
 export class MarkdownProcessor {
-  constructor(
-    private readonly vault: Vault,
-    private settings: Settings,
-    private readonly logger: Logger
-  ) {}
+  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
 
   /**
    * Generate markdown content, given a transcription.
@@ -34,20 +30,14 @@ export class MarkdownProcessor {
   public async generate(
     originalFile: FileDetail,
     processedAudio: FileDetail,
+    originalAudioFileHash: string,
     transcription: TranscriptionResponse
   ): Promise<MarkdownOutput> {
     this.logger.log(`Generating markdown content: ${originalFile.filename}`);
 
-    const fileCreationTime = await getFileCreationDateTime(
-      originalFile,
-      this.vault.adapter
-    );
+    const fileCreationTime = await getFileCreationDateTime(originalFile, this.vault.adapter);
 
-    const title = this.generateMarkdownTitle(
-      originalFile,
-      fileCreationTime,
-      this.settings
-    );
+    const title = this.generateMarkdownTitle(originalFile, fileCreationTime, this.settings);
 
     const transcribedAtDate = DateTime.now().toFormat(MARKDOWN_DATE_FORMAT);
     const recordedAtDate = fileCreationTime.toFormat(MARKDOWN_DATE_FORMAT);
@@ -59,20 +49,15 @@ export class MarkdownProcessor {
 
     // Pull out tags
     if (this.settings.shouldExtractTags) {
-      const extractedTags = await extractTags(
-        transcription.text,
-        this.settings
-      );
+      const extractedTags = await extractTags(transcription.text, this.settings);
 
       const tags = ["#transcribed", ...extractedTags];
       markdownContent.push(`${tags.join(" ")}\n\n`);
     }
 
     // Embed a link to the transcription as it will be in Obsidian:
-    // `<obsidian>/Voice/audio/<audio-file>
-    markdownContent.push(
-      `![](${RELATIVE_AUDIO_FILE_LOCATION}/${processedAudio.filename})\n\n`
-    );
+    // `<obsidian>/voice/audio/<audio-file>
+    markdownContent.push(`![](${RELATIVE_AUDIO_FILE_LOCATION}/${processedAudio.filename})\n\n`);
 
     const segments = transcription.segments.map(this.objectifySegment);
 
@@ -92,18 +77,15 @@ export class MarkdownProcessor {
       recorded_at: recordedAtDate,
       transcribed_at: transcribedAtDate,
       original_file_name: originalFile.filename,
+      original_file_hash: originalAudioFileHash,
     };
 
     // Get categorization and importance ranking
     if (this.settings.shouldUseCategoryMaps) {
-      const categorization = categorizeVoiceMemo(
-        originalFile.name,
-        this.settings
-      );
+      const categorization = categorizeVoiceMemo(originalFile.name, this.settings);
 
       frontmatter.importance = categorization.importance;
-      frontmatter.voice_memo_category =
-        categorization.category?.label ?? "none";
+      frontmatter.voice_memo_category = categorization.category?.label ?? "none";
     }
 
     const markdown = matter.stringify(markdownContent.join(""), frontmatter);
@@ -114,11 +96,7 @@ export class MarkdownProcessor {
     };
   }
 
-  public generateMarkdownTitle(
-    file: FileDetail,
-    fileCreationTime: DateTime,
-    settings: Settings
-  ) {
+  public generateMarkdownTitle(file: FileDetail, fileCreationTime: DateTime, settings: Settings) {
     const categoryRegex = generateCategoryRegex(settings);
 
     // Remove categorization prefix from title
@@ -134,9 +112,7 @@ export class MarkdownProcessor {
     return title;
   }
 
-  private objectifySegment(
-    segment: RawTranscriptionSegment
-  ): TranscriptionSegment {
+  private objectifySegment(segment: RawTranscriptionSegment): TranscriptionSegment {
     // Small snippets can be returned as TranscriptionSegment from the API.
     if (segment.hasOwnProperty("text")) {
       return segment as never as TranscriptionSegment;

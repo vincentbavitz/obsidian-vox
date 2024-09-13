@@ -1,11 +1,4 @@
-import {
-  Plugin,
-  TAbstractFile,
-  TFile,
-  TFolder,
-  Vault,
-  debounce,
-} from "obsidian";
+import { Plugin, TAbstractFile, debounce } from "obsidian";
 import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
 import { TranscriptionProcessor } from "./TranscriptionProcessor";
@@ -21,29 +14,27 @@ export default class VoxPlugin extends Plugin {
   async onload(): Promise<void> {
     // If settings change quickly, we don't want to spam `watchUnprocessedDirectory`;
     // wait a few seconds before reseting our watcher.
-    this.watchUnprocessedDirectory = debounce(
-      this.watchUnprocessedDirectory,
-      WATCHER_DELAY_MS
-    );
+    this.watchUnprocessedDirectory = debounce(this.watchUnprocessedDirectory, WATCHER_DELAY_MS);
 
     await this.loadSettings();
     this.addSettingTab(new VoxSettingTab(this));
 
     this.logger = new Logger(this.manifest);
-    this.processor = new TranscriptionProcessor(
-      this.app,
-      this.settings,
-      this.logger
-    );
+    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger);
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {
       this.watchUnprocessedDirectory();
 
       // Then watch for any changes...
-      const queueFromWatcher = (file: TAbstractFile) => {
+      const queueFromWatcher = async (file: TAbstractFile) => {
         if (file.path.includes(this.settings.watchDirectory)) {
-          this.processor.queueFiles([file.path]);
+          const transcribedFilesInfo = await this.processor.getTranscribedFiles();
+          const candidate = await this.processor.getTranscribedStatus(file.path, transcribedFilesInfo);
+
+          if (!candidate.isTranscribed) {
+            this.processor.queueFiles([candidate]);
+          }
         }
       };
 
@@ -62,20 +53,9 @@ export default class VoxPlugin extends Plugin {
     this.logger.log("Resetting queue...");
 
     // First grab all the files that have yet to be processed.
-    const unprocessedFiles: string[] = [];
-    const folder = this.app.vault.getAbstractFileByPath(
-      this.settings.watchDirectory
-    );
-
-    if (folder instanceof TFolder) {
-      Vault.recurseChildren(folder, (file) => {
-        if (file instanceof TFile) {
-          unprocessedFiles.push(file.path);
-        }
-      });
-    }
-
-    this.processor.queueFiles(unprocessedFiles);
+    this.processor.getUnprocessedFiles().then((unprocessedFiles) => {
+      this.processor.queueFiles(unprocessedFiles);
+    });
   }
 
   async saveSettings(): Promise<void> {
