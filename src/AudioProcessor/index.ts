@@ -5,12 +5,13 @@ import { Settings } from "settings";
 import { FileDetail } from "types";
 import { extractFileDetail, getFileCreationDateTime } from "utils/format";
 import { Logger } from "utils/log";
-import { CATEGORY_REGEX_LEGACY, FILENAME_DATE_FORMAT, PUBLIC_API_ENDPOINT, generateCategoryRegex } from "../constants";
-
-type TransformAudioReturn = {
-  output: FileDetail;
-  hash: string;
-};
+import {
+  CACHE_DIRECTORY,
+  CATEGORY_REGEX_LEGACY,
+  FILENAME_DATE_FORMAT,
+  PUBLIC_API_ENDPOINT,
+  generateCategoryRegex,
+} from "../constants";
 
 export class AudioProcessor {
   constructor(
@@ -40,7 +41,7 @@ export class AudioProcessor {
     // Move file into the processing directory.
     const outputName = await this.cleanAudioFilename(audioFile);
     const outputFilename = `${outputName}${desiredExtension}`;
-    const outputFileDetail = extractFileDetail(path.join(this.settings.outputDirectory, "audio", outputFilename));
+    const outputCachedFileDetail = extractFileDetail(path.join(CACHE_DIRECTORY, outputFilename));
 
     const audioBinary = await this.vault.adapter.readBinary(audioFile.filepath);
 
@@ -82,17 +83,17 @@ export class AudioProcessor {
         throw new Error(error);
       }
 
-      await this.vault.adapter.mkdir(outputFileDetail.directory);
-      await this.vault.adapter.writeBinary(outputFileDetail.filepath, response.data);
+      await this.vault.adapter.mkdir(outputCachedFileDetail.directory);
+      await this.vault.adapter.writeBinary(outputCachedFileDetail.filepath, response.data);
     } else {
-      const exists = await this.vault.exists(outputFileDetail.filepath);
+      const exists = await this.vault.exists(outputCachedFileDetail.filepath);
 
       if (!exists) {
-        await this.vault.adapter.copy(audioFile.filepath, outputFileDetail.filepath);
+        await this.vault.adapter.copy(audioFile.filepath, outputCachedFileDetail.filepath);
       }
     }
 
-    return outputFileDetail;
+    return outputCachedFileDetail;
   }
 
   /**

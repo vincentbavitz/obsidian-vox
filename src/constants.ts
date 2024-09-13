@@ -1,5 +1,7 @@
 import { Settings } from "settings";
 
+export const CACHE_DIRECTORY = ".obsidian/.vox-cache";
+
 export const PUBLIC_API_ENDPOINT = "https://api.obsidian-vox.org:1337";
 
 export const FILENAME_DATE_FORMAT = "yyyyMMdd-hh:mm";
@@ -18,8 +20,7 @@ export const VALID_HOST_REGEX = new RegExp(
 export const RELATIVE_AUDIO_FILE_LOCATION = "./audio";
 export const CATEGORY_REGEX_LEGACY = new RegExp(/^([ABCD]{1,6})\s/);
 export const FFMPEG_PATH = "./.ffmpeg/ffmpeg";
-export const DATETIME_IN_FILE_REGEX =
-  /\/([0-9]{4}[0-9]{2}[0-9]{2}-[0-9]{2}:[0-9]{2})/;
+export const DATETIME_IN_FILE_REGEX = /\/([0-9]{4}[0-9]{2}[0-9]{2}-[0-9]{2}:[0-9]{2})/;
 
 /**
  * Build regex for Filename categories and importance ratings.

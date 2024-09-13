@@ -8,7 +8,7 @@ import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
-import { PUBLIC_API_ENDPOINT } from "../constants";
+import { CACHE_DIRECTORY, PUBLIC_API_ENDPOINT } from "../constants";
 import { Settings } from "../settings";
 
 type TranscribedItem = {
@@ -45,20 +45,17 @@ export class TranscriptionProcessor {
   }
 
   public async queueFiles(audioFiles: TranscriptionCandidate[]) {
-    if (audioFiles.length === 0) {
+    const quantity = audioFiles.length;
+
+    if (quantity === 0) {
       return;
     }
 
-    let items = 0;
-
     for (const audioFile of audioFiles) {
       this.queue.add(() => this.processFile(audioFile));
-      items++;
     }
 
-    if (items) {
-      new Notice(`Added ${items} file${items > 1 ? "s" : ""} to the transcription queue.`);
-    }
+    new Notice(`Added ${quantity} file${quantity > 1 ? "s" : ""} to the transcription queue.`);
   }
 
   public stop() {
@@ -148,18 +145,29 @@ export class TranscriptionProcessor {
   }
 
   /**
-   * Move the generated markdown content and the processed audio to their
-   * output location.
+   * Move the generated markdown content and the processed audio to their output location.
    */
   private async consolidateFiles(originalFile: FileDetail, processedAudio: FileDetail, markdown: MarkdownOutput) {
-    const finalMarkdownLocation = String(this.settings.outputDirectory);
-    const finalMarkdownFilepath = `${finalMarkdownLocation}/${markdown.title}.md`;
+    const subdirectory = originalFile.directory
+      .replace(new RegExp(`^${this.settings.watchDirectory}\/`), "")
+      .replace(/\/$/, "");
 
+    const finalMarkdownLocation = subdirectory.length
+      ? `${this.settings.outputDirectory}/${subdirectory}`
+      : this.settings.outputDirectory;
+
+    const finalMarkdownFilepath = `${finalMarkdownLocation}/${markdown.title}.md`;
     const finalAudioLocation = `${finalMarkdownLocation}/audio`;
     const finalAudioFilepath = `${finalAudioLocation}/${processedAudio.filename}`;
 
     await this.app.vault.adapter.mkdir(finalMarkdownLocation);
     await this.app.vault.adapter.mkdir(finalAudioLocation);
+
+    // Move the audio file we placed into the cache in the AudioProcessor step.
+    const cachedTransformedAudioFile = `${CACHE_DIRECTORY}/${processedAudio.filename}`;
+    await this.app.vault.adapter.rename(cachedTransformedAudioFile, finalAudioFilepath);
+
+    // Write the markdown content to the final location.
     await this.app.vault.adapter.write(finalMarkdownFilepath, markdown.content);
 
     // Remove original file if the user desires
