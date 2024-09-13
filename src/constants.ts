@@ -1,8 +1,10 @@
 import { Settings } from "settings";
 
 export const CACHE_DIRECTORY = ".obsidian/.vox-cache";
-
 export const PUBLIC_API_ENDPOINT = "https://api.obsidian-vox.org:1337";
+
+export const OBSIDIAN_VAULT_ID_HEADER_KEY = "obsidian-vault-id";
+export const OBSIDIAN_API_KEY_HEADER_KEY = "obsidian-vox-api-key";
 
 export const FILENAME_DATE_FORMAT = "yyyyMMdd-hh:mm";
 export const MARKDOWN_DATE_FORMAT = "yyyy-MM-dd hh:mm";

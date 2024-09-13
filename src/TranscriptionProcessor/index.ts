@@ -8,7 +8,12 @@ import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
-import { CACHE_DIRECTORY, PUBLIC_API_ENDPOINT } from "../constants";
+import {
+  CACHE_DIRECTORY,
+  OBSIDIAN_API_KEY_HEADER_KEY,
+  OBSIDIAN_VAULT_ID_HEADER_KEY,
+  PUBLIC_API_ENDPOINT,
+} from "../constants";
 import { Settings } from "../settings";
 
 type TranscribedItem = {
@@ -117,7 +122,8 @@ export class TranscriptionProcessor {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            "obsidian-vault-id": this.app.appId,
+            [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.app.appId,
+            [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
           },
           timeout: 20 * ONE_MINUTE_IN_MS,
           responseType: "json",

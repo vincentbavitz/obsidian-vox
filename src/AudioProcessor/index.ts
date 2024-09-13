@@ -9,6 +9,8 @@ import {
   CACHE_DIRECTORY,
   CATEGORY_REGEX_LEGACY,
   FILENAME_DATE_FORMAT,
+  OBSIDIAN_API_KEY_HEADER_KEY,
+  OBSIDIAN_VAULT_ID_HEADER_KEY,
   PUBLIC_API_ENDPOINT,
   generateCategoryRegex,
 } from "../constants";
@@ -70,7 +72,8 @@ export class AudioProcessor {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            "obsidian-vault-id": this.appId,
+            [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.appId,
+            [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
           },
           responseType: "arraybuffer",
         }

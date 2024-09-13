@@ -10,6 +10,8 @@ const SELF_HOSTING_CLASS = "self-host-setting";
 const HIDDEN_CLASS = "st-hidden";
 
 export interface Settings {
+  apiKey: string;
+
   isSelfHosted: boolean;
   selfHostedEndpoint: string;
 
@@ -34,7 +36,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  // apiKey: <-- For when paid option is available.
+  apiKey: "",
 
   isSelfHosted: false,
   selfHostedEndpoint: "",
@@ -129,19 +131,11 @@ export class VoxSettingTab extends PluginSettingTab {
   addAudioExtension(): void {
     new Setting(this.containerEl)
       .setName("Audio Output Extension")
-      .setDesc(
-        "Audio files linked from your output transcription will be converted to this format."
-      )
+      .setDesc("Audio files linked from your output transcription will be converted to this format.")
       .addDropdown((cb) => {
         cb.setValue(this.plugin.settings.audioOutputExtension);
-        cb.addOption(
-          AudioOutputExtension.MP3,
-          AudioOutputExtension.MP3.toUpperCase()
-        );
-        cb.addOption(
-          AudioOutputExtension.WAV,
-          AudioOutputExtension.WAV.toUpperCase()
-        );
+        cb.addOption(AudioOutputExtension.MP3, AudioOutputExtension.MP3.toUpperCase());
+        cb.addOption(AudioOutputExtension.WAV, AudioOutputExtension.WAV.toUpperCase());
         cb.onChange((newExtension: AudioOutputExtension) => {
           this.plugin.settings.audioOutputExtension = newExtension;
           this.plugin.saveSettings();
@@ -182,9 +176,7 @@ export class VoxSettingTab extends PluginSettingTab {
 
     new Setting(this.containerEl)
       .setName("Enable Tag Extraction")
-      .setDesc(
-        "Intelligently pull out tags from your transcript which match those in your vault."
-      )
+      .setDesc("Intelligently pull out tags from your transcript which match those in your vault.")
       .addToggle((cb) => {
         cb.setValue(this.plugin.settings.shouldExtractTags);
         cb.onChange((value) => {
@@ -197,10 +189,7 @@ export class VoxSettingTab extends PluginSettingTab {
       });
 
     this.addTagLimit(), this.addTagsList();
-    this.toggleSettingsVisibility(
-      TAG_SETTINGS_CLASS,
-      this.plugin.settings.shouldExtractTags
-    );
+    this.toggleSettingsVisibility(TAG_SETTINGS_CLASS, this.plugin.settings.shouldExtractTags);
   }
 
   addTagLimit(): Setting {
@@ -291,20 +280,14 @@ export class VoxSettingTab extends PluginSettingTab {
           this.plugin.saveSettings();
 
           // Should we display further category map settings?
-          this.toggleSettingsVisibility(
-            CATEGORIZATION_SETTINGS_CLASS,
-            shouldEnable
-          );
+          this.toggleSettingsVisibility(CATEGORIZATION_SETTINGS_CLASS, shouldEnable);
         });
       });
 
     this.addCategoryMapExample();
     this.addCategoryMap();
 
-    this.toggleSettingsVisibility(
-      CATEGORIZATION_SETTINGS_CLASS,
-      this.plugin.settings.shouldUseCategoryMaps
-    );
+    this.toggleSettingsVisibility(CATEGORIZATION_SETTINGS_CLASS, this.plugin.settings.shouldUseCategoryMaps);
   }
 
   addCategoryMapExample() {
@@ -368,20 +351,18 @@ export class VoxSettingTab extends PluginSettingTab {
       }
     };
 
-    const rowSetting = new Setting(this.containerEl)
-      .setClass(CATEGORIZATION_SETTINGS_CLASS)
-      .addText((cb) => {
-        rowSettingTextComponent = cb;
-        cb.setValue(categoryValue);
-        cb.setDisabled(true);
-        cb.inputEl.style.pointerEvents = "none";
+    const rowSetting = new Setting(this.containerEl).setClass(CATEGORIZATION_SETTINGS_CLASS).addText((cb) => {
+      rowSettingTextComponent = cb;
+      cb.setValue(categoryValue);
+      cb.setDisabled(true);
+      cb.inputEl.style.pointerEvents = "none";
 
-        cb.onChange((value) => {
-          if (value !== categoryValue) {
-            null;
-          }
-        });
+      cb.onChange((value) => {
+        if (value !== categoryValue) {
+          null;
+        }
       });
+    });
 
     // Clicking on thie EDIT icon enters editing mode
     rowSetting.addExtraButton((cb) => {
@@ -476,8 +457,7 @@ export class VoxSettingTab extends PluginSettingTab {
 
         cb.onClick(() => {
           if (newMapItemInputKey && newMapItemInputValue) {
-            this.plugin.settings.categoryMap[newMapItemInputKey.value] =
-              newMapItemInputValue.value;
+            this.plugin.settings.categoryMap[newMapItemInputKey.value] = newMapItemInputValue.value;
 
             newMapItemInputKey.value = "";
             newMapItemInputValue.value = "";
@@ -495,34 +475,26 @@ export class VoxSettingTab extends PluginSettingTab {
     const arrowIcon = getIcon("right-chevron-glyph");
 
     if (arrowIcon) {
-      categoryMapSetting.controlEl.insertBefore(
-        arrowIcon,
-        categoryMapSetting.controlEl.children[1]
-      );
+      categoryMapSetting.controlEl.insertBefore(arrowIcon, categoryMapSetting.controlEl.children[1]);
     }
 
     categoryMapSetting.infoEl.remove();
   }
 
   addSelfHostToggle(): void {
-    new Setting(this.containerEl)
-      .setName("Use Self-Hosted Backend")
-      .addToggle((cb) => {
-        cb.setValue(this.plugin.settings.isSelfHosted);
-        cb.onChange((selfHosted) => {
-          this.plugin.settings.isSelfHosted = selfHosted;
-          this.plugin.saveSettings();
+    new Setting(this.containerEl).setName("Use Self-Hosted Backend").addToggle((cb) => {
+      cb.setValue(this.plugin.settings.isSelfHosted);
+      cb.onChange((selfHosted) => {
+        this.plugin.settings.isSelfHosted = selfHosted;
+        this.plugin.saveSettings();
 
-          this.toggleSettingsVisibility(SELF_HOSTING_CLASS, selfHosted);
-        });
+        this.toggleSettingsVisibility(SELF_HOSTING_CLASS, selfHosted);
       });
+    });
 
     this.addSelfHostLocation();
 
-    this.toggleSettingsVisibility(
-      SELF_HOSTING_CLASS,
-      this.plugin.settings.isSelfHosted
-    );
+    this.toggleSettingsVisibility(SELF_HOSTING_CLASS, this.plugin.settings.isSelfHosted);
   }
 
   addSelfHostLocation(): void {
