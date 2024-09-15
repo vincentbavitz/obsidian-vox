@@ -6,7 +6,7 @@ VOX automatically transcribes the audio notes in your Obsidian vault - extractin
 
 The *unprocessed* directory is watched for new files; upon discovering a new file it will trigger the transcription and save the file to your vault.
 
-Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 15 transcriptions per day, and I will increase this limit to 100 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server and no information is saved.
+Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 100 transcriptions per day, and I will increase this limit to 1000 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server and no information is saved.
 
 My intention is for Vox to be as easy to use as possible - however if you feel more secure running your own backend, this will be possible following versions.
  

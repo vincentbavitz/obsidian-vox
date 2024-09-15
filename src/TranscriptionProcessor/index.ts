@@ -179,6 +179,13 @@ export class TranscriptionProcessor {
     await this.app.vault.adapter.mkdir(finalMarkdownLocation);
     await this.app.vault.adapter.mkdir(finalAudioLocation);
 
+    // Remove the resultant audio file if it already exists; this could occur if
+    // the user has deleted a transcription note then re-transcribes the same audio.
+    const finalAudioFileExists = await this.app.vault.adapter.exists(finalAudioFilepath);
+    if (finalAudioFileExists) {
+      await this.app.vault.adapter.remove(finalAudioFilepath);
+    }
+
     // Move the audio file we placed into the cache in the AudioProcessor step.
     const cachedTransformedAudioFile = `${CACHE_DIRECTORY}/${processedAudio.filename}`;
     await this.app.vault.adapter.rename(cachedTransformedAudioFile, finalAudioFilepath);

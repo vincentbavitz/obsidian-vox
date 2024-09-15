@@ -9,7 +9,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
-    "release": "standard-version -t ''",
+    "release": "standard-version -t '' && git push --follow-tags origin main",
     "format": "prettier --check src"
   },
   "keywords": [
