@@ -31,10 +31,6 @@ type TranscriptionCandidate = FileDetail & {
 
 const ONE_MINUTE_IN_MS = 60_000;
 
-type TranscriptionProcessorOptions = {
-  onIdle?: () => void;
-};
-
 /**
  * Process audio files into markdown content.
  */
@@ -43,32 +39,30 @@ export class TranscriptionProcessor {
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
 
-  constructor(
-    private readonly app: App,
-    private settings: Settings,
-    private readonly logger: Logger,
-    private options: TranscriptionProcessorOptions = {}
-  ) {
+  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
 
     this.queue = new PQueue({ concurrency: 4 });
-    if (this.options.onIdle) {
-      this.queue.on("idle", this.options.onIdle);
-    }
+
+    // Feed the queue with more files upon idle.
+    this.queue.on("idle", () => this.queueFiles());
   }
 
-  public async queueFiles(audioFiles: TranscriptionCandidate[]) {
-    const quantity = audioFiles.length;
+  public async queueFile(audioFile: TranscriptionCandidate) {
+    this.queue.add(() => this.processFile(audioFile));
+    new Notice(`Added a new file to the transcription queue.`);
+  }
+
+  public async queueFiles() {
+    const unprocessed = await this.getUnprocessedFiles();
+    const quantity = unprocessed.length;
 
     if (quantity === 0) {
       return;
     }
 
-    for (const audioFile of audioFiles) {
-      this.queue.add(() => this.processFile(audioFile));
-    }
-
+    this.queue.addAll(unprocessed.map((audio) => () => this.processFile(audio)));
     new Notice(`Added ${quantity} file${quantity > 1 ? "s" : ""} to the transcription queue.`);
   }
 
@@ -213,7 +207,7 @@ export class TranscriptionProcessor {
    * Searching by hash as a fallback ensures that even as our filename transformation functions change or evolve,
    * we can always determine which file was transcribed.
    */
-  public async getUnprocessedFiles() {
+  private async getUnprocessedFiles() {
     const FILE_CHUNK_LIMIT = 12;
 
     const folder = this.app.vault.getAbstractFileByPath(this.settings.watchDirectory);

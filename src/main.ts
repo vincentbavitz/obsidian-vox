@@ -6,22 +6,21 @@ import { TranscriptionProcessor } from "./TranscriptionProcessor";
 const WATCHER_DELAY_MS = 10_000;
 
 export default class VoxPlugin extends Plugin {
-  private logger: Logger;
-
-  private processor: TranscriptionProcessor;
   public settings: Settings;
 
+  // private debouncedQueueUnprocessedFiles: typeof this.queueUnprocessedFiles;
+  private processor: TranscriptionProcessor;
+  private logger: Logger;
+
   async onload(): Promise<void> {
-    // If settings change quickly, we don't want to spam `processFiles`; wait a few seconds before reseting our processor.
+    // If settings change quickly, we don't want to spam `queueUnprocessedFiles`; wait a few seconds before reseting our processor.
     this.queueUnprocessedFiles = debounce(this.queueUnprocessedFiles, WATCHER_DELAY_MS);
 
     await this.loadSettings();
     this.addSettingTab(new VoxSettingTab(this));
 
     this.logger = new Logger(this.manifest);
-    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger, {
-      onIdle: this.queueUnprocessedFiles,
-    });
+    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger);
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {
@@ -34,7 +33,7 @@ export default class VoxPlugin extends Plugin {
           const candidate = await this.processor.getTranscribedStatus(file.path, transcribedFilesInfo);
 
           if (!candidate.isTranscribed) {
-            this.processor.queueFiles([candidate]);
+            this.processor.queueFile(candidate);
           }
         }
       };
@@ -53,15 +52,12 @@ export default class VoxPlugin extends Plugin {
     this.processor.reset(this.settings);
     this.logger.log("Adding files to transcription queue.");
 
-    // First grab all the files that have yet to be processed.
-    this.processor.getUnprocessedFiles().then((unprocessedFiles) => {
-      this.processor.queueFiles(unprocessedFiles);
-    });
+    // Queue a reasonable subset the files that have yet to be processed.
+    this.processor.queueFiles();
   }
 
   async saveSettings(): Promise<void> {
     this.queueUnprocessedFiles();
-
     return this.saveData(this.settings);
   }
 
