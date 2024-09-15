@@ -12,19 +12,20 @@ export default class VoxPlugin extends Plugin {
   public settings: Settings;
 
   async onload(): Promise<void> {
-    // If settings change quickly, we don't want to spam `watchUnprocessedDirectory`;
-    // wait a few seconds before reseting our watcher.
-    this.watchUnprocessedDirectory = debounce(this.watchUnprocessedDirectory, WATCHER_DELAY_MS);
+    // If settings change quickly, we don't want to spam `processFiles`; wait a few seconds before reseting our processor.
+    this.queueUnprocessedFiles = debounce(this.queueUnprocessedFiles, WATCHER_DELAY_MS);
 
     await this.loadSettings();
     this.addSettingTab(new VoxSettingTab(this));
 
     this.logger = new Logger(this.manifest);
-    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger);
+    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger, {
+      onIdle: this.queueUnprocessedFiles,
+    });
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {
-      this.watchUnprocessedDirectory();
+      this.queueUnprocessedFiles();
 
       // Then watch for any changes...
       const queueFromWatcher = async (file: TAbstractFile) => {
@@ -47,10 +48,10 @@ export default class VoxPlugin extends Plugin {
     this.processor.stop();
   }
 
-  private watchUnprocessedDirectory() {
+  private queueUnprocessedFiles() {
     // Reset the queue and re-collect files.
     this.processor.reset(this.settings);
-    this.logger.log("Resetting queue...");
+    this.logger.log("Adding files to transcription queue.");
 
     // First grab all the files that have yet to be processed.
     this.processor.getUnprocessedFiles().then((unprocessedFiles) => {
@@ -59,7 +60,7 @@ export default class VoxPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    this.watchUnprocessedDirectory();
+    this.queueUnprocessedFiles();
 
     return this.saveData(this.settings);
   }

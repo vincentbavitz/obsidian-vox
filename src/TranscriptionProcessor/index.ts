@@ -31,6 +31,10 @@ type TranscriptionCandidate = FileDetail & {
 
 const ONE_MINUTE_IN_MS = 60_000;
 
+type TranscriptionProcessorOptions = {
+  onIdle?: () => void;
+};
+
 /**
  * Process audio files into markdown content.
  */
@@ -39,14 +43,19 @@ export class TranscriptionProcessor {
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
 
-  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {
+  constructor(
+    private readonly app: App,
+    private settings: Settings,
+    private readonly logger: Logger,
+    private options: TranscriptionProcessorOptions = {}
+  ) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
 
     this.queue = new PQueue({ concurrency: 4 });
-
-    // What if this setting changes? Requires restart?
-    // this.queue.on('idle', )
+    if (this.options.onIdle) {
+      this.queue.on("idle", this.options.onIdle);
+    }
   }
 
   public async queueFiles(audioFiles: TranscriptionCandidate[]) {
@@ -155,6 +164,7 @@ export class TranscriptionProcessor {
    */
   private async consolidateFiles(originalFile: FileDetail, processedAudio: FileDetail, markdown: MarkdownOutput) {
     const subdirectory = originalFile.directory
+      // eslint-disable-next-line no-useless-escape
       .replace(new RegExp(`^${this.settings.watchDirectory}\/`), "")
       .replace(/\/$/, "");
 
@@ -188,37 +198,42 @@ export class TranscriptionProcessor {
   }
 
   /**
-   * Get all files that have not already been processed, searching first by filename and then by hash.
+   * Get a limited number of files that have not already been processed, searching first by filename and then by hash.
+   * A reasonable limit here is necessary to avoid smashing the CPU with hash computation or overloading our PQueue
+   * with thousands of promises.
    *
    * @note
-   * Searching this way ensures that even as our filename transformation functions
-   * change or evolve, we can always determine which file was transcribed.
+   * Searching by hash as a fallback ensures that even as our filename transformation functions change or evolve,
+   * we can always determine which file was transcribed.
    */
   public async getUnprocessedFiles() {
-    const folder = this.app.vault.getAbstractFileByPath(this.settings.watchDirectory);
+    const FILE_CHUNK_LIMIT = 12;
 
-    const unprocessedAudioFiles: TranscriptionCandidate[] = [];
-    const allPotentialAudioFiles: string[] = [];
+    const folder = this.app.vault.getAbstractFileByPath(this.settings.watchDirectory);
+    const validUnprocessedCandidates: TranscriptionCandidate[] = [];
+    const potentialCandidates: string[] = [];
 
     if (folder instanceof TFolder) {
       Vault.recurseChildren(folder, (file) => {
         if (file instanceof TFile) {
-          allPotentialAudioFiles.push(file.path);
+          potentialCandidates.push(file.path);
         }
       });
     }
 
     const transcribedFiles = await this.getTranscribedFiles();
 
-    for (const filepath of allPotentialAudioFiles) {
-      const candidate = await this.getTranscribedStatus(filepath, transcribedFiles);
+    for (const filepath of potentialCandidates) {
+      if (validUnprocessedCandidates.length < FILE_CHUNK_LIMIT) {
+        const candidate = await this.getTranscribedStatus(filepath, transcribedFiles);
 
-      if (!candidate.isTranscribed) {
-        unprocessedAudioFiles.push(candidate);
+        if (!candidate.isTranscribed) {
+          validUnprocessedCandidates.push(candidate);
+        }
       }
     }
 
-    return unprocessedAudioFiles;
+    return validUnprocessedCandidates;
   }
 
   public async getTranscribedFiles() {
