@@ -3,6 +3,7 @@ import { MarkdownProcessor } from "MarkdownProcessor";
 import axios, { HttpStatusCode, isAxiosError } from "axios";
 import matter from "gray-matter";
 import { sha1 } from "hash-wasm";
+import shuffle from "lodash/shuffle";
 import { App, Notice, TFile, TFolder, Vault } from "obsidian";
 import PQueue from "p-queue";
 import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
@@ -43,7 +44,7 @@ export class TranscriptionProcessor {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
 
-    this.queue = new PQueue({ concurrency: 4 });
+    this.queue = new PQueue({ concurrency: 8 });
 
     // Feed the queue with more files upon idle.
     this.queue.on("idle", () => this.queueFiles());
@@ -208,7 +209,7 @@ export class TranscriptionProcessor {
    * we can always determine which file was transcribed.
    */
   private async getUnprocessedFiles() {
-    const FILE_CHUNK_LIMIT = 12;
+    const FILE_CHUNK_LIMIT = 16;
 
     const folder = this.app.vault.getAbstractFileByPath(this.settings.watchDirectory);
     const validUnprocessedCandidates: TranscriptionCandidate[] = [];
@@ -222,9 +223,11 @@ export class TranscriptionProcessor {
       });
     }
 
+    // Shuffle them to avoid hitting the same file repeatedly, if it fails.
+    const shuffledCandidates = shuffle(potentialCandidates);
     const transcribedFiles = await this.getTranscribedFiles();
 
-    for (const filepath of potentialCandidates) {
+    for (const filepath of shuffledCandidates) {
       if (validUnprocessedCandidates.length < FILE_CHUNK_LIMIT) {
         const candidate = await this.getTranscribedStatus(filepath, transcribedFiles);
 
