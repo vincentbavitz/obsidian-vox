@@ -209,7 +209,7 @@ export class TranscriptionProcessor {
    * we can always determine which file was transcribed.
    */
   private async getUnprocessedFiles() {
-    const FILE_CHUNK_LIMIT = 16;
+    const FILE_CHUNK_LIMIT = 24;
 
     const folder = this.app.vault.getAbstractFileByPath(this.settings.watchDirectory);
     const validUnprocessedCandidates: TranscriptionCandidate[] = [];
