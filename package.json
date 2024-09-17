@@ -29,6 +29,8 @@
     "luxon": "^3.1.1",
     "obsidian": "^0.16.3",
     "p-queue": "^6.6.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^4.9.4"
   },
   "devDependencies": {
@@ -36,6 +38,8 @@
     "@types/lodash": "^4.14.191",
     "@types/luxon": "^3.1.0",
     "@types/node": "^20.2.4",
+    "@types/react": "^18.3.7",
+    "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^5.42.1",
     "@typescript-eslint/parser": "^5.42.1",
     "builtin-modules": "^3.3.0",

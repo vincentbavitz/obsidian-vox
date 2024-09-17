@@ -1,16 +1,21 @@
 import { FSWatcher, createReadStream } from "fs";
 import { readFile } from "fs/promises";
-import { Plugin } from "obsidian";
+import VoxPlugin from "main";
+
+export type VoxStatusItem = {
+  hash: string;
+  details: FileDetail;
+  status: "queued" | "converting" | "transcribing" | "complete" | "failed";
+};
+
+/**
+ * Status of all transcription candidates for this session, indexed by hash.
+ */
+export type VoxStatusMap = Record<string, VoxStatusItem>;
 
 type ExtendedFsWatcher = {
   resolvedPath: string;
   watcher: FSWatcher;
-};
-
-type ObsidianGitPlugin = Plugin & {
-  gitManager: {
-    git: unknown;
-  };
 };
 
 declare module "obsidian" {
@@ -22,7 +27,7 @@ declare module "obsidian" {
     plugins: {
       enabledPlugins: Set<string>;
       plugins: {
-        "obsidian-git": ObsidianGitPlugin | undefined;
+        vox: VoxPlugin;
       };
     };
   }

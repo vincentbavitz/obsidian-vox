@@ -6,7 +6,7 @@ import { sha1 } from "hash-wasm";
 import shuffle from "lodash/shuffle";
 import { App, Notice, TFile, TFolder, Vault } from "obsidian";
 import PQueue from "p-queue";
-import { FileDetail, MarkdownOutput, TranscriptionResponse } from "types";
+import { FileDetail, MarkdownOutput, TranscriptionResponse, VoxStatusMap } from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
 import {
@@ -36,6 +36,8 @@ const ONE_MINUTE_IN_MS = 60_000;
  * Process audio files into markdown content.
  */
 export class TranscriptionProcessor {
+  public status: VoxStatusMap;
+
   private markdownProcessor: MarkdownProcessor;
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
@@ -48,6 +50,8 @@ export class TranscriptionProcessor {
 
     // Feed the queue with more files upon idle.
     this.queue.on("idle", () => this.queueFiles());
+
+    this.status = {};
   }
 
   public async queueFile(audioFile: TranscriptionCandidate) {
@@ -62,6 +66,10 @@ export class TranscriptionProcessor {
     if (quantity === 0) {
       return;
     }
+
+    unprocessed.forEach((audio) => {
+      this.status[audio.hash] = { hash: audio.hash, details: audio, status: "queued" };
+    });
 
     this.queue.addAll(unprocessed.map((audio) => () => this.processFile(audio)));
     new Notice(`Added ${quantity} file${quantity > 1 ? "s" : ""} to the transcription queue.`);
