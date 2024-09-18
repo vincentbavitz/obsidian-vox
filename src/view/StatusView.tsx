@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import { Root, createRoot } from "react-dom/client";
+import { TranscriptionProcessor } from "TranscriptionProcessor";
 import { VoxStatusMap } from "types";
 import { AppContext } from "./AppContext";
 import { VoxStatus } from "./VoxStatus";
@@ -12,10 +13,19 @@ export const VOX_STATUS_VIEW = "vox-status-view";
 // See the following for context: https://github.com/microsoft/TypeScript/issues/49486
 
 export class VoxStatusView extends ItemView {
+  status: VoxStatusMap;
   root: Root | null = null;
 
-  constructor(leaf: WorkspaceLeaf, private status: VoxStatusMap) {
+  constructor(readonly leaf: WorkspaceLeaf, private processor: TranscriptionProcessor) {
     super(leaf);
+
+    this.status = this.processor.status;
+
+    // Tell our processor to re-render the status view when the status changes.
+    this.processor.onStatusChange = (status) => {
+      this.status = status;
+      this.render(status);
+    };
   }
 
   getViewType() {
@@ -32,15 +42,18 @@ export class VoxStatusView extends ItemView {
 
   async onOpen() {
     this.root = createRoot(this.containerEl.children[1]);
-    const state = this.leaf.getEphemeralState();
-    console.log("StatusView ➡️ state:", state);
+    this.render(this.status);
+  }
 
-    console.log("StatusView ➡️ this.root:", this.root);
+  render(status: VoxStatusMap) {
+    if (!this.root) {
+      return null;
+    }
 
     this.root.render(
       <React.StrictMode>
         <AppContext.Provider value={this.app}>
-          <VoxStatus status={this.status} />
+          <VoxStatus leaf={this.leaf} status={status} />
         </AppContext.Provider>
       </React.StrictMode>
     );

@@ -9,9 +9,11 @@ const WATCHER_DELAY_MS = 10_000;
 export default class VoxPlugin extends Plugin {
   public settings: Settings;
 
-  // private debouncedQueueUnprocessedFiles: typeof this.queueUnprocessedFiles;
   private processor: TranscriptionProcessor;
   private logger: Logger;
+
+  // The sidebar leaf UI to view the current status
+  private leaf: WorkspaceLeaf | null = null;
 
   async onload(): Promise<void> {
     // If settings change quickly, we don't want to spam `queueUnprocessedFiles`; wait a few seconds before reseting our processor.
@@ -44,7 +46,7 @@ export default class VoxPlugin extends Plugin {
     });
 
     // Register the status view.
-    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusView(leaf, this.processor.status));
+    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusView(leaf, this.processor));
 
     this.addRibbonIcon("file-audio", "View VOX Status", () => {
       this.activateView();
@@ -67,24 +69,24 @@ export default class VoxPlugin extends Plugin {
   async activateView() {
     const { workspace } = this.app;
 
-    let leaf: WorkspaceLeaf | null = null;
     const leaves = workspace.getLeavesOfType(VOX_STATUS_VIEW);
 
     if (leaves.length > 0) {
       // A leaf with our view already exists, use that
-      leaf = leaves[0];
+      this.leaf = leaves[0];
     } else {
       // Our view could not be found in the workspace, create a new leaf
       // in the right sidebar for it
-      leaf = workspace.getRightLeaf(false);
-      await leaf.setViewState({ type: VOX_STATUS_VIEW, active: true });
+      this.leaf = workspace.getRightLeaf(false);
 
-      leaf.setEphemeralState({ asdf: "asdfasdf" });
-      leaf.trigger("");
+      await this.leaf.setViewState({
+        type: VOX_STATUS_VIEW,
+        active: true,
+      });
     }
 
     // "Reveal" the leaf in case it is in a collapsed sidebar
-    workspace.revealLeaf(leaf);
+    workspace.revealLeaf(this.leaf);
   }
 
   private queueUnprocessedFiles() {

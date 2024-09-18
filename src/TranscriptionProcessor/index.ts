@@ -6,7 +6,14 @@ import { sha1 } from "hash-wasm";
 import shuffle from "lodash/shuffle";
 import { App, Notice, TFile, TFolder, Vault } from "obsidian";
 import PQueue from "p-queue";
-import { FileDetail, MarkdownOutput, TranscriptionResponse, VoxStatusMap } from "types";
+import {
+  FileDetail,
+  MarkdownOutput,
+  TranscriptionResponse,
+  VoxStatusItem,
+  VoxStatusItemStatus,
+  VoxStatusMap,
+} from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
 import {
@@ -36,7 +43,8 @@ const ONE_MINUTE_IN_MS = 60_000;
  * Process audio files into markdown content.
  */
 export class TranscriptionProcessor {
-  public status: VoxStatusMap;
+  public onStatusChange?: (status: VoxStatusMap) => void;
+  public status: VoxStatusMap = {};
 
   private markdownProcessor: MarkdownProcessor;
   private audioProcessor: AudioProcessor;
@@ -50,8 +58,6 @@ export class TranscriptionProcessor {
 
     // Feed the queue with more files upon idle.
     this.queue.on("idle", () => this.queueFiles());
-
-    this.status = {};
   }
 
   public async queueFile(audioFile: TranscriptionCandidate) {
@@ -67,12 +73,18 @@ export class TranscriptionProcessor {
       return;
     }
 
-    unprocessed.forEach((audio) => {
-      this.status[audio.hash] = { hash: audio.hash, details: audio, status: "queued" };
-    });
+    // unprocessed.forEach((audio) => this.setCanditateStatus(audio, VoxStatusItemStatus.QUEUED));
 
     this.queue.addAll(unprocessed.map((audio) => () => this.processFile(audio)));
     new Notice(`Added ${quantity} file${quantity > 1 ? "s" : ""} to the transcription queue.`);
+  }
+
+  public pause() {
+    this.queue.pause();
+  }
+
+  public resume() {
+    this.queue.start();
   }
 
   public stop() {
@@ -86,7 +98,10 @@ export class TranscriptionProcessor {
 
   private async processFile(audioFile: TranscriptionCandidate) {
     try {
+      this.setCanditateStatus(audioFile, VoxStatusItemStatus.PROCESSING_AUDIO);
       const processedAudio = await this.audioProcessor.transformAudio(audioFile);
+
+      this.setCanditateStatus(audioFile, VoxStatusItemStatus.TRANSCRIBING);
       const transcribed = await this.transcribe(processedAudio);
 
       if (transcribed && transcribed.segments) {
@@ -95,10 +110,14 @@ export class TranscriptionProcessor {
         await this.consolidateFiles(audioFile, processedAudio, markdown);
 
         const notice = `Transcription complete: ${markdown.title}`;
+        this.setCanditateStatus(audioFile, VoxStatusItemStatus.COMPLETE);
+
         this.logger.log(notice);
         new Notice(notice);
       }
     } catch (error: unknown) {
+      this.setCanditateStatus(audioFile, VoxStatusItemStatus.FAILED);
+
       console.warn(error);
       if (isAxiosError(error)) {
         if (error.response?.status === HttpStatusCode.TooManyRequests) {
@@ -299,5 +318,28 @@ export class TranscriptionProcessor {
     const transcribedFoundByHash = transcribedItems.some((item) => hash === item.originalAudioFileHash);
 
     return { ...detail, isTranscribed: transcribedFoundByHash, hash };
+  }
+
+  private setCanditateStatus(candidate: TranscriptionCandidate, status: VoxStatusItem["status"]) {
+    const finalized = status === "COMPLETE" || status === "FAILED";
+    const finalizedAt = finalized ? new Date() : null;
+
+    if (this.status[candidate.hash]) {
+      this.status[candidate.hash] = {
+        ...this.status[candidate.hash],
+        finalizedAt,
+        status,
+      };
+    } else {
+      this.status[candidate.hash] = {
+        hash: candidate.hash,
+        details: candidate,
+        addedAt: new Date(),
+        finalizedAt,
+        status,
+      };
+    }
+
+    this.onStatusChange?.(this.status);
   }
 }

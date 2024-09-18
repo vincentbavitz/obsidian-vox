@@ -2,10 +2,21 @@ import { FSWatcher, createReadStream } from "fs";
 import { readFile } from "fs/promises";
 import VoxPlugin from "main";
 
+export enum VoxStatusItemStatus {
+  QUEUED = "QUEUED",
+  PROCESSING_AUDIO = "PROCESSING_AUDIO",
+  TRANSCRIBING = "TRANSCRIBING",
+  COMPLETE = "COMPLETE",
+  FAILED = "FAILED",
+}
+
 export type VoxStatusItem = {
   hash: string;
   details: FileDetail;
-  status: "queued" | "converting" | "transcribing" | "complete" | "failed";
+  status: VoxStatusItemStatus;
+
+  addedAt: Date;
+  finalizedAt: Date | null;
 };
 
 /**
