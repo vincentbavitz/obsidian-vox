@@ -23,7 +23,7 @@ export default class VoxPlugin extends Plugin {
     this.addSettingTab(new VoxSettingTab(this));
 
     this.logger = new Logger(this.manifest);
-    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger);
+    this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger, this);
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {

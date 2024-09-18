@@ -1,6 +1,7 @@
 import matter from "gray-matter";
 import startCase from "lodash/startCase";
 import { DateTime } from "luxon";
+import VoxPlugin from "main";
 import { Vault } from "obsidian";
 import { Settings } from "settings";
 import {
@@ -22,7 +23,12 @@ import {
 } from "../constants";
 
 export class MarkdownProcessor {
-  constructor(private readonly vault: Vault, private settings: Settings, private readonly logger: Logger) {}
+  constructor(
+    private readonly vault: Vault,
+    private settings: Settings,
+    private readonly logger: Logger,
+    private readonly plugin: VoxPlugin
+  ) {}
 
   /**
    * Generate markdown content, given a transcription.
@@ -76,6 +82,7 @@ export class MarkdownProcessor {
       type: "transcribed",
       recorded_at: recordedAtDate,
       transcribed_at: transcribedAtDate,
+      transcribed_vox_version: this.plugin.manifest.version,
       original_file_name: originalFile.filename,
       original_file_hash: originalAudioFileHash,
     };

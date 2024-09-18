@@ -4,6 +4,7 @@ import axios, { HttpStatusCode, isAxiosError } from "axios";
 import matter from "gray-matter";
 import { sha1 } from "hash-wasm";
 import shuffle from "lodash/shuffle";
+import VoxPlugin from "main";
 import { App, Notice, TFile, TFolder, Vault } from "obsidian";
 import PQueue from "p-queue";
 import {
@@ -55,8 +56,13 @@ export class TranscriptionProcessor {
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
 
-  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {
-    this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger);
+  constructor(
+    private readonly app: App,
+    private settings: Settings,
+    private readonly logger: Logger,
+    private readonly plugin: VoxPlugin
+  ) {
+    this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger, this.plugin);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
 
     this.queue = new PQueue({ concurrency: 8 });
