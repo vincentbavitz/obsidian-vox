@@ -1,6 +1,6 @@
 {
   "name": "vox",
-  "version": "1.0.19",
+  "version": "1.1.0",
   "author": "vincentbavitz",
   "license": "AGPL-3.0-only",
   "description": "Intelligently create transcripts of voice memos",
@@ -9,7 +9,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
-    "release": "standard-version -t '' && git push --follow-tags origin main",
+    "release": "standard-version -t ''",
     "format": "prettier --check src"
   },
   "keywords": [
