@@ -1,14 +1,17 @@
 import clsx from "clsx";
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import React from "react";
-import { VoxStatusItem, VoxStatusItemStatus, VoxStatusMap } from "types";
+import { TranscriptionProcessorState } from "TranscriptionProcessor";
+import { VoxStatusItem, VoxStatusItemStatus } from "types";
 
 type Props = {
   leaf: WorkspaceLeaf;
-  status: VoxStatusMap;
+  state: TranscriptionProcessorState;
+  onClickPause: () => void;
+  onClickResume: () => void;
 };
 
-export const VoxStatus = ({ status, leaf }: Props) => {
+export const VoxStatus = ({ state, leaf, onClickPause, onClickResume }: Props) => {
   const refStartButton = React.useRef<HTMLDivElement>(null);
   const refPauseButton = React.useRef<HTMLDivElement>(null);
 
@@ -21,12 +24,13 @@ export const VoxStatus = ({ status, leaf }: Props) => {
     setIcon(refPauseButton.current, "pause");
   }, []);
 
-  const items = Object.values(status).sort((a, b) => a.addedAt.getTime() - b.addedAt.getTime());
+  const items = Object.values(state.items).sort((a, b) => a.addedAt.getTime() - b.addedAt.getTime());
 
   const processingAudio = items.filter((item) => item.status === VoxStatusItemStatus.PROCESSING_AUDIO);
   const transcribing = items.filter((item) => item.status === VoxStatusItemStatus.TRANSCRIBING);
-  const processing = [...transcribing, ...processingAudio];
+  const awaiting = items.filter((item) => item.status === VoxStatusItemStatus.QUEUED);
 
+  const processing = [...transcribing, ...processingAudio, ...awaiting];
   const completed = items.filter((item) => item.status === VoxStatusItemStatus.COMPLETE);
   const failed = items.filter((item) => item.status === VoxStatusItemStatus.FAILED);
 
@@ -54,7 +58,8 @@ export const VoxStatus = ({ status, leaf }: Props) => {
             style={{
               width: "min-content",
             }}
-            className={clsx("clickable-icon nav-action-button", "is-active")}
+            onClick={onClickResume}
+            className={clsx("clickable-icon nav-action-button", state.running ? "is-active" : "")}
             aria-label="Start VOX"
           />
 
@@ -63,7 +68,8 @@ export const VoxStatus = ({ status, leaf }: Props) => {
             style={{
               width: "min-content",
             }}
-            className="clickable-icon nav-action-button"
+            onClick={onClickPause}
+            className={clsx("clickable-icon nav-action-button", state.running ? "" : "is-active")}
             aria-label="Pause VOX"
           />
         </div>

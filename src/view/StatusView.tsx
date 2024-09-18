@@ -1,8 +1,7 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import { Root, createRoot } from "react-dom/client";
-import { TranscriptionProcessor } from "TranscriptionProcessor";
-import { VoxStatusMap } from "types";
+import { TranscriptionProcessor, TranscriptionProcessorState } from "TranscriptionProcessor";
 import { AppContext } from "./AppContext";
 import { VoxStatus } from "./VoxStatus";
 
@@ -13,18 +12,18 @@ export const VOX_STATUS_VIEW = "vox-status-view";
 // See the following for context: https://github.com/microsoft/TypeScript/issues/49486
 
 export class VoxStatusView extends ItemView {
-  status: VoxStatusMap;
+  state: TranscriptionProcessorState;
   root: Root | null = null;
 
   constructor(readonly leaf: WorkspaceLeaf, private processor: TranscriptionProcessor) {
     super(leaf);
 
-    this.status = this.processor.status;
+    this.state = this.processor.state;
 
     // Tell our processor to re-render the status view when the status changes.
-    this.processor.onStatusChange = (status) => {
-      this.status = status;
-      this.render(status);
+    this.processor.onStateChange = (state) => {
+      this.state = state;
+      this.render(state);
     };
   }
 
@@ -42,10 +41,10 @@ export class VoxStatusView extends ItemView {
 
   async onOpen() {
     this.root = createRoot(this.containerEl.children[1]);
-    this.render(this.status);
+    this.render(this.state);
   }
 
-  render(status: VoxStatusMap) {
+  render(state: TranscriptionProcessorState) {
     if (!this.root) {
       return null;
     }
@@ -53,7 +52,12 @@ export class VoxStatusView extends ItemView {
     this.root.render(
       <React.StrictMode>
         <AppContext.Provider value={this.app}>
-          <VoxStatus leaf={this.leaf} status={status} />
+          <VoxStatus
+            leaf={this.leaf}
+            state={state}
+            onClickResume={() => this.processor.resume()}
+            onClickPause={() => this.processor.pause()}
+          />
         </AppContext.Provider>
       </React.StrictMode>
     );

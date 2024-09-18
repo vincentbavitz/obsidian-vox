@@ -39,12 +39,17 @@ type TranscriptionCandidate = FileDetail & {
 
 const ONE_MINUTE_IN_MS = 60_000;
 
+export type TranscriptionProcessorState = {
+  running: boolean;
+  items: VoxStatusMap;
+};
+
 /**
  * Process audio files into markdown content.
  */
 export class TranscriptionProcessor {
-  public onStatusChange?: (status: VoxStatusMap) => void;
-  public status: VoxStatusMap = {};
+  public onStateChange?: (state: TranscriptionProcessorState) => void;
+  public state: TranscriptionProcessorState;
 
   private markdownProcessor: MarkdownProcessor;
   private audioProcessor: AudioProcessor;
@@ -58,6 +63,9 @@ export class TranscriptionProcessor {
 
     // Feed the queue with more files upon idle.
     this.queue.on("idle", () => this.queueFiles());
+
+    // Set initial state for the processor; which is fed into the StatusView UI.
+    this.state = { running: !this.queue.isPaused, items: {} };
   }
 
   public async queueFile(audioFile: TranscriptionCandidate) {
@@ -73,7 +81,8 @@ export class TranscriptionProcessor {
       return;
     }
 
-    // unprocessed.forEach((audio) => this.setCanditateStatus(audio, VoxStatusItemStatus.QUEUED));
+    // Add all the unprocessed files to the visual queue.
+    unprocessed.forEach((audio) => this.setCanditateStatus(audio, VoxStatusItemStatus.QUEUED));
 
     this.queue.addAll(unprocessed.map((audio) => () => this.processFile(audio)));
     new Notice(`Added ${quantity} file${quantity > 1 ? "s" : ""} to the transcription queue.`);
@@ -81,10 +90,16 @@ export class TranscriptionProcessor {
 
   public pause() {
     this.queue.pause();
+
+    this.state.running = false;
+    this.onStateChange?.(this.state);
   }
 
   public resume() {
     this.queue.start();
+
+    this.state.running = true;
+    this.onStateChange?.(this.state);
   }
 
   public stop() {
@@ -321,17 +336,19 @@ export class TranscriptionProcessor {
   }
 
   private setCanditateStatus(candidate: TranscriptionCandidate, status: VoxStatusItem["status"]) {
+    this.state.running = !this.queue.isPaused;
+
     const finalized = status === "COMPLETE" || status === "FAILED";
     const finalizedAt = finalized ? new Date() : null;
 
-    if (this.status[candidate.hash]) {
-      this.status[candidate.hash] = {
-        ...this.status[candidate.hash],
+    if (this.state.items[candidate.hash]) {
+      this.state.items[candidate.hash] = {
+        ...this.state.items[candidate.hash],
         finalizedAt,
         status,
       };
     } else {
-      this.status[candidate.hash] = {
+      this.state.items[candidate.hash] = {
         hash: candidate.hash,
         details: candidate,
         addedAt: new Date(),
@@ -340,6 +357,6 @@ export class TranscriptionProcessor {
       };
     }
 
-    this.onStatusChange?.(this.status);
+    this.onStateChange?.(this.state);
   }
 }
