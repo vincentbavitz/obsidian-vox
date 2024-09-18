@@ -6,7 +6,7 @@ VOX automatically transcribes the audio notes in your Obsidian vault - extractin
 
 The *unprocessed* directory is watched for new files; upon discovering a new file it will trigger the transcription and save the file to your vault.
 
-Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 100 transcriptions per day, and I will increase this limit to 1000 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server and no information is saved.
+Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 100 transcriptions per day, and I will increase this limit to 1000 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server. No personal information is collected or processed.
 
 My intention is for Vox to be as easy to use as possible - however if you feel more secure running your own backend, this will be possible following versions.
  
@@ -14,12 +14,21 @@ My intention is for Vox to be as easy to use as possible - however if you feel m
 
 VOX is all about simplicity and time saving - therefore it's hosted on a dedicated backend with auto-scaling and GPU acceleration. This enables extremely fast transcriptions and remains private by holding data in memory alone. For those would prefer to run things themselves, the option will to use your own backend will be available very soon.
 
+#### Status View
+
+Open the status panel to see the current status of your transcription queue.
+
+![obsidian-vox-sidebar-example](https://github.com/user-attachments/assets/1291c3c0-7e4e-4c4e-900e-59ad7b8e3c17)
+
+
+
 
 ## Motivation
 
 Voice memos are a very convenient and efficient medium to formulate and explicate your ideas. However they suffer from the major drawback that they are not plaintext and cannot be indexed, searched, sorted or categorized.
 
 As your collection of raw voice notes grows, your ability to search through them for important information shrinks. An enormous directory of thousands of audio files is no way to organise our notes. VOX solves this problem by pulling out the important information from your voice notes and intelligently categorizing them (see #Categorization below).
+
 
 ## Instructions
 
@@ -86,10 +95,6 @@ Here is a list of example categories along with their prefixes...
 You may set your own categorization map in the settings - the sky's the limit!
 
 ## Roadmap
-
-#### Status Panel
-
-A status panel will provide information about which items are currently being transcribed, which are queued and any errors, incl. any further information.
 
 #### Templates
 
