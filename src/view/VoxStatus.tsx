@@ -1,8 +1,10 @@
-import clsx from "clsx";
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import { TranscriptionProcessorState } from "TranscriptionProcessor";
-import { VoxStatusItem, VoxStatusItemStatus } from "types";
+import { VoxStatusItemStatus } from "types";
+import ActionIcon from "./components/ActionIcon";
+import VoxPanelRecorder from "./components/VoxPanelRecorder";
+import VoxStatusList from "./components/VoxStatusList";
 
 type Props = {
   leaf: WorkspaceLeaf;
@@ -36,168 +38,35 @@ export const VoxStatus = ({ state, leaf, onClickPause, onClickResume }: Props) =
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginBottom: "var(--p-spacing)",
-        }}
-      >
-        <h4
-          style={{
-            flex: 1,
-            margin: 0,
-          }}
-        >
-          Vox Status
-        </h4>
+      <VoxPanelRecorder />
 
-        <div className="nav-buttons-container">
-          <div
-            ref={refStartButton}
-            style={{
-              width: "min-content",
-            }}
-            onClick={onClickResume}
-            className={clsx("clickable-icon nav-action-button", state.running ? "is-active" : "")}
-            aria-label="Start VOX"
-          />
-
-          <div
-            ref={refPauseButton}
-            style={{
-              width: "min-content",
-            }}
-            onClick={onClickPause}
-            className={clsx("clickable-icon nav-action-button", state.running ? "" : "is-active")}
-            aria-label="Pause VOX"
-          />
-        </div>
-      </div>
-
-      <StatusItemList heading="Transcription Queue" items={processing} />
-
-      {completed.length > 0 && <StatusItemList heading="Complete" items={completed} />}
-      {failed.length > 0 && <StatusItemList heading="Failed" items={failed} />}
-    </div>
-  );
-};
-
-const StatusItemList = ({ heading, items }: { heading: string; items: VoxStatusItem[] }) => {
-  const count = items.length;
-
-  return (
-    <div
-      style={{
-        marginBottom: "var(--p-spacing)",
-      }}
-    >
-      <p>
-        {heading} ({count})
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5em",
-        }}
-      >
-        {items.map((item) => (
-          <StatusItem key={item.hash} {...item} />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const STATUS_LABEL_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "QUEUED",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "PROCESSING",
-  [VoxStatusItemStatus.TRANSCRIBING]: "TRANSCRIBING",
-  [VoxStatusItemStatus.COMPLETE]: "DONE",
-  [VoxStatusItemStatus.FAILED]: "FAILED",
-};
-
-const STATUS_ICON_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "ellipsis",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "combine",
-  [VoxStatusItemStatus.TRANSCRIBING]: "loader",
-  [VoxStatusItemStatus.COMPLETE]: "check",
-  [VoxStatusItemStatus.FAILED]: "circle-slash",
-};
-
-const STATUS_COLOR_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "var(--text-faint)",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "var(--color-yellow)",
-  [VoxStatusItemStatus.TRANSCRIBING]: "var(--color-cyan)",
-  [VoxStatusItemStatus.COMPLETE]: "var(--color-green)",
-  [VoxStatusItemStatus.FAILED]: "var(--color-red)",
-};
-
-const StatusItem = ({ details, status }: VoxStatusItem) => {
-  const refIcon = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!refIcon.current) {
-      return;
-    }
-
-    setIcon(refIcon.current, STATUS_ICON_MAP[status]);
-  }, []);
-
-  return (
-    <div
-      style={{
-        padding: "0.5em",
-        borderRadius: "var(--radius-s)",
-        backgroundColor: "var(--background-secondary-alt)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "0.5em",
-        }}
-      >
-        {/* <div
-          style={{
-            aspectRatio: "1",
-          }}
-          ref={refIcon}
-        /> */}
-
+      <div>
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            width: "100%",
-            gap: "0.5em",
+            marginBottom: "var(--p-spacing)",
           }}
         >
-          <div
-            className="nav-file-title-content"
+          <h4
             style={{
               flex: 1,
-              fontSize: "var(--nav-item-size)",
               margin: 0,
-              opacity: 0.75,
             }}
           >
-            {details.name}
-          </div>
+            Vox Status
+          </h4>
 
-          <div
-            className="nav-file-tag"
-            style={{
-              backgroundColor: STATUS_COLOR_MAP[status],
-              color: "var(--text-on-accent-inverted)",
-            }}
-          >
-            {STATUS_LABEL_MAP[status]}
+          <div className="nav-buttons-container">
+            <ActionIcon icon="play" label="Start VOX" isActive={state.running} onClick={onClickResume} />
+            <ActionIcon icon="pause" label="Pause VOX" isActive={!state.running} onClick={onClickPause} />
           </div>
         </div>
+
+        <VoxStatusList heading="Transcription Queue" items={processing} />
+
+        {completed.length > 0 && <VoxStatusList heading="Complete" items={completed} />}
+        {failed.length > 0 && <VoxStatusList heading="Failed" items={failed} />}
       </div>
     </div>
   );

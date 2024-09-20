@@ -1,3 +1,4 @@
+import AudioRecorder from "AudioRecorder";
 import TemplaterPlugin from "main";
 import { PluginSettingTab, Setting, TextComponent, getIcon } from "obsidian";
 import { AudioOutputExtension } from "types";
@@ -14,6 +15,8 @@ export interface Settings {
 
   isSelfHosted: boolean;
   selfHostedEndpoint: string;
+
+  recordingDeviceId: string | null;
 
   watchDirectory: string;
   outputDirectory: string;
@@ -40,6 +43,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
   isSelfHosted: false,
   selfHostedEndpoint: "",
+
+  recordingDeviceId: null,
 
   audioOutputExtension: AudioOutputExtension.MP3,
   outputDirectory: "Voice",
@@ -68,10 +73,13 @@ export class VoxSettingTab extends PluginSettingTab {
     super(app, plugin);
   }
 
-  display(): void {
+  async display(): Promise<void> {
     this.containerEl.empty();
 
-    this.addCategoryHeading("General Settings");
+    this.addCategoryHeading("Recording Settings");
+    await this.addRecordingDevice();
+
+    this.addCategoryHeading("Transcription Settings");
 
     this.addWatchDirectory();
     this.addTranscriptionsDirectory();
@@ -94,6 +102,32 @@ export class VoxSettingTab extends PluginSettingTab {
     if (margin) {
       headingEl.style.marginTop = "1.5rem";
     }
+  }
+
+  async addRecordingDevice() {
+    const recorder = new AudioRecorder();
+    const devices = await recorder.getInputDevices();
+    const existing = devices.find((device) => device.deviceId === this.plugin.settings.recordingDeviceId);
+
+    const setting = new Setting(this.containerEl)
+      .setName("Recording Device")
+      .setDesc("Set your default recording device.")
+      .addDropdown((cb) => {
+        devices.map((device) => {
+          cb.addOption(device.deviceId, device.label);
+        });
+
+        cb.setValue(existing?.deviceId ?? "default");
+        cb.onChange((deviceId: string) => {
+          this.plugin.settings.recordingDeviceId = deviceId;
+          this.plugin.saveSettings();
+        });
+      });
+
+    const settingItems = Array.from(setting.controlEl.children) as HTMLElement[];
+    settingItems.forEach((item) => (item.style.maxWidth = "200px"));
+
+    console.log("index ➡️ setting.controlEl.children:", setting.controlEl.children);
   }
 
   addWatchDirectory(): void {
@@ -133,9 +167,10 @@ export class VoxSettingTab extends PluginSettingTab {
       .setName("Audio Output Extension")
       .setDesc("Audio files linked from your output transcription will be converted to this format.")
       .addDropdown((cb) => {
-        cb.setValue(this.plugin.settings.audioOutputExtension);
         cb.addOption(AudioOutputExtension.MP3, AudioOutputExtension.MP3.toUpperCase());
         cb.addOption(AudioOutputExtension.WAV, AudioOutputExtension.WAV.toUpperCase());
+
+        cb.setValue(this.plugin.settings.audioOutputExtension);
         cb.onChange((newExtension: AudioOutputExtension) => {
           this.plugin.settings.audioOutputExtension = newExtension;
           this.plugin.saveSettings();

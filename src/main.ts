@@ -1,3 +1,4 @@
+import AudioRecorder from "AudioRecorder";
 import { Plugin, TAbstractFile, WorkspaceLeaf, debounce } from "obsidian";
 import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
@@ -43,6 +44,20 @@ export default class VoxPlugin extends Plugin {
 
       this.registerEvent(this.app.vault.on("create", queueFromWatcher));
       this.registerEvent(this.app.vault.on("rename", queueFromWatcher));
+
+      (async () => {
+        const recorder = new AudioRecorder();
+
+        const devices = await recorder.getInputDevices();
+        console.log("main ➡️ devices:", devices);
+
+        recorder.record();
+
+        setTimeout(async () => {
+          const blob = await recorder.stop();
+          console.log("main ➡️ blob:", blob);
+        }, 2000);
+      })();
     });
 
     // Register the status view.
