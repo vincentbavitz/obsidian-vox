@@ -3,7 +3,6 @@ import React from "react";
 import { TranscriptionProcessorState } from "TranscriptionProcessor";
 import { VoxStatusItemStatus } from "types";
 import ActionIcon from "./components/ActionIcon";
-import VoxPanelRecorder from "./components/VoxPanelRecorder";
 import VoxStatusList from "./components/VoxStatusList";
 
 type Props = {
@@ -38,8 +37,6 @@ export const VoxStatus = ({ state, leaf, onClickPause, onClickResume }: Props) =
 
   return (
     <div>
-      <VoxPanelRecorder />
-
       <div>
         <div
           style={{

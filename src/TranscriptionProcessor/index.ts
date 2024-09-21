@@ -1,6 +1,7 @@
 import { AudioProcessor } from "AudioProcessor";
 import { MarkdownProcessor } from "MarkdownProcessor";
 import axios, { HttpStatusCode, isAxiosError } from "axios";
+import { randomUUID } from "crypto";
 import matter from "gray-matter";
 import { sha1 } from "hash-wasm";
 import shuffle from "lodash/shuffle";
@@ -45,16 +46,18 @@ export type TranscriptionProcessorState = {
   items: VoxStatusMap;
 };
 
+type StateSubscriberMap = Record<string, (state: TranscriptionProcessorState) => void>;
+
 /**
  * Process audio files into markdown content.
  */
 export class TranscriptionProcessor {
-  public onStateChange?: (state: TranscriptionProcessorState) => void;
-  public state: TranscriptionProcessorState;
-
   private markdownProcessor: MarkdownProcessor;
   private audioProcessor: AudioProcessor;
   private queue: PQueue;
+
+  public state: TranscriptionProcessorState;
+  private subscribers: StateSubscriberMap = {};
 
   constructor(
     private readonly app: App,
@@ -98,23 +101,50 @@ export class TranscriptionProcessor {
     this.queue.pause();
 
     this.state.running = false;
-    this.onStateChange?.(this.state);
+    this.notifySubscribers();
   }
 
   public resume() {
     this.queue.start();
 
     this.state.running = true;
-    this.onStateChange?.(this.state);
+    this.notifySubscribers();
   }
 
   public stop() {
+    this.state.running = false;
+
     this.queue.clear();
+    this.notifySubscribers();
   }
 
   public reset(settings: Settings) {
     this.settings = settings;
     this.queue.clear();
+
+    this.notifySubscribers();
+  }
+
+  /**
+   * Subscribe to updates on the processor's state.
+   */
+  public subscribe(callback: (state: TranscriptionProcessorState) => void) {
+    const subscriberId = randomUUID();
+    this.subscribers[subscriberId] = callback;
+
+    // Return a function to unsubscribe
+    return () => this.unsubscribe(subscriberId);
+  }
+
+  private unsubscribe(subscriberId: string) {
+    delete this.subscribers[subscriberId];
+  }
+
+  /**
+   * Run the callback for all of our current subscribers; updating them on our new state.
+   */
+  private notifySubscribers() {
+    Object.values(this.subscribers).forEach((fn) => fn?.(this.state));
   }
 
   private async processFile(audioFile: TranscriptionCandidate) {
@@ -363,6 +393,6 @@ export class TranscriptionProcessor {
       };
     }
 
-    this.onStateChange?.(this.state);
+    this.notifySubscribers();
   }
 }

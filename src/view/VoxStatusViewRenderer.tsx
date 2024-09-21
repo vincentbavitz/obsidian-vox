@@ -3,17 +3,17 @@ import React from "react";
 import { Root, createRoot } from "react-dom/client";
 import { TranscriptionProcessor, TranscriptionProcessorState } from "TranscriptionProcessor";
 import { AppContext } from "./AppContext";
-import { VoxStatus } from "./VoxStatus";
+import { VoxStatus } from "./VoxStatusView";
 
 export const VOX_STATUS_VIEW = "vox-status-view";
 
 // We import as React rather than { StrictMode } so that we implicitly import the
 // React dependency, since we need it during the build step.
 // See the following for context: https://github.com/microsoft/TypeScript/issues/49486
-
-export class VoxStatusView extends ItemView {
+export class VoxStatusViewRenderer extends ItemView {
   state: TranscriptionProcessorState;
   root: Root | null = null;
+  private unsubscribe: () => void;
 
   constructor(readonly leaf: WorkspaceLeaf, private processor: TranscriptionProcessor) {
     super(leaf);
@@ -21,10 +21,10 @@ export class VoxStatusView extends ItemView {
     this.state = this.processor.state;
 
     // Tell our processor to re-render the status view when the status changes.
-    this.processor.onStateChange = (state) => {
+    this.unsubscribe = this.processor.subscribe((state) => {
       this.state = state;
       this.render(state);
-    };
+    });
   }
 
   getViewType() {
@@ -65,5 +65,6 @@ export class VoxStatusView extends ItemView {
 
   async onClose() {
     this.root?.unmount();
+    this.unsubscribe();
   }
 }

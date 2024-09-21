@@ -20,7 +20,7 @@ const ActionIcon = ({ icon, label, isActive = false, isDisabled = false, onClick
     }
 
     setIcon(ref.current, icon);
-  }, []);
+  }, [icon]);
 
   return (
     <div

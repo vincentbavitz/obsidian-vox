@@ -1,20 +1,34 @@
-import React from "react";
+import { AudioRecorderState } from "AudioRecorder";
+import { TranscriptionProcessorState } from "TranscriptionProcessor";
+import VoxPlugin from "main";
+import { setIcon } from "obsidian";
+import React, { useEffect } from "react";
 import ActionIcon from "./ActionIcon";
 
-// React must be explicitly imported for client-side runtime rendering;
-React;
+type Props = {
+  plugin: VoxPlugin;
+  recorderState: AudioRecorderState;
+  processorState: TranscriptionProcessorState;
 
-const VoxPanelRecorder = () => {
+  recorderStart: () => Promise<void>;
+  recorderStop: () => Promise<Blob>;
+  recorderResume: () => void;
+  recorderPause: () => void;
+};
+
+const VoxPanelRecorder = (props: Props) => {
+  // const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         gap: "0.50em",
-        marginBottom: "var(--p-spacing)",
       }}
     >
-      <AudioRecorderBox />
+      <AudioRecorderBox {...props} />
+
       <FileTranscriptionInfo />
     </div>
   );
@@ -26,11 +40,7 @@ const FileTranscriptionInfo = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        padding: "0.5em",
         gap: "0.5em",
-        borderRadius: "var(--radius-m)",
-        border: "1px solid var(--tab-outline-color)",
-        backgroundColor: "var(--tab-background-active)",
       }}
     >
       {/* Recording File Details */}
@@ -68,7 +78,7 @@ const FileTranscriptionInfo = () => {
         </select>
       </div>
 
-      <div
+      {/* <div
         style={{
           flex: "1",
           padding: "0.5em",
@@ -79,18 +89,40 @@ const FileTranscriptionInfo = () => {
         }}
       >
         R0XX {"{{ title }}"}.{}
-      </div>
+      </div> */}
 
       <button className="disabled mod-cta">Add to queue</button>
     </div>
   );
 };
 
-const AudioRecorderBox = () => {
+const AudioRecorderBox = ({
+  plugin,
+  recorderState,
+  processorState,
+  recorderStart,
+  recorderStop,
+  recorderPause,
+  recorderResume,
+}: Props) => {
+  const refRecordIcon = React.useRef<HTMLDivElement>(null);
+  // const [isRecording, setIsRecording] = React.useState(false);
+
+  useEffect(() => {
+    if (!refRecordIcon.current) {
+      return;
+    }
+
+    setIcon(refRecordIcon.current, "mic", 22);
+  }, [recorderState.recordingState]);
+
+  console.log("VoxPanelRecorder ➡️ recorderState.blob:", recorderState.blob);
+
   return (
     <div
       style={{
-        padding: "0.5em",
+        position: "relative",
+        padding: "0.25em",
         borderRadius: "var(--radius-m)",
         border: "1px solid var(--tab-outline-color)",
         // backgroundColor: "var(--tab-background-active)",
@@ -104,7 +136,11 @@ const AudioRecorderBox = () => {
           gap: "0.25em",
         }}
       >
-        <ActionIcon icon="mic" label="Start Recording" isActive={true} onClick={() => null} />
+        {recorderState.recordingState === "paused" ? (
+          <ActionIcon icon="mic" label="Resume Recording" onClick={() => recorderResume()} />
+        ) : (
+          <ActionIcon icon="pause" label="Pause Recording" onClick={() => recorderPause()} />
+        )}
 
         {/* Recording Stats */}
         <div
@@ -114,7 +150,7 @@ const AudioRecorderBox = () => {
             alignItems: "center",
             justifyContent: "space-between",
             backgroundColor: "var(--background-primary)",
-            borderRadius: "var(--radius-s)",
+            borderRadius: "var(--radius-m)",
             fontSize: "var(--font-smallest)",
             padding: "0 0.75em",
           }}
@@ -122,12 +158,43 @@ const AudioRecorderBox = () => {
           <span>
             13:59 <span style={{ opacity: 0.5 }}>/ 20:00</span>
           </span>{" "}
-          <span>19.35 MB</span>
+          <span style={{ opacity: 0.5 }}>19.35 MB</span>
         </div>
 
-        <ActionIcon isDisabled={true} icon="x" label="Cancel Recording" isActive={false} onClick={() => null} />
-        <ActionIcon isDisabled={true} icon="check" label="Save Recording" isActive={false} onClick={() => null} />
+        <ActionIcon
+          isDisabled={true}
+          icon="x"
+          label="Cancel Recording"
+          isActive={false}
+          onClick={() => recorderStop()}
+        />
+
+        <ActionIcon
+          isDisabled={true}
+          icon="check"
+          label="Save Recording"
+          isActive={false}
+          onClick={() => recorderStop()}
+        />
       </div>
+
+      {recorderState.recordingState === "idle" && (
+        <div
+          onClick={recorderStart}
+          ref={refRecordIcon}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            borderRadius: "var(--radius-m)",
+            border: "1px solid var(--tab-outline-color)",
+            backgroundColor: "var(--dropdown-background)",
+          }}
+        />
+      )}
     </div>
   );
 };

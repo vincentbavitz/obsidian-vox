@@ -2,7 +2,8 @@ import AudioRecorder from "AudioRecorder";
 import { Plugin, TAbstractFile, WorkspaceLeaf, debounce } from "obsidian";
 import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
-import { VOX_STATUS_VIEW, VoxStatusView } from "view/StatusView";
+import { VOX_RECORDER_VIEW, VoxRecorderViewRenderer } from "view/VoxRecorderViewRenderer";
+import { VOX_STATUS_VIEW, VoxStatusViewRenderer } from "view/VoxStatusViewRenderer";
 import { TranscriptionProcessor } from "./TranscriptionProcessor";
 
 const WATCHER_DELAY_MS = 10_000;
@@ -11,6 +12,7 @@ export default class VoxPlugin extends Plugin {
   public settings: Settings;
 
   private processor: TranscriptionProcessor;
+  private recorder: AudioRecorder;
   private logger: Logger;
 
   // The sidebar leaf UI to view the current status
@@ -25,6 +27,7 @@ export default class VoxPlugin extends Plugin {
 
     this.logger = new Logger(this.manifest);
     this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger, this);
+    this.recorder = new AudioRecorder();
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {
@@ -44,28 +47,19 @@ export default class VoxPlugin extends Plugin {
 
       this.registerEvent(this.app.vault.on("create", queueFromWatcher));
       this.registerEvent(this.app.vault.on("rename", queueFromWatcher));
-
-      (async () => {
-        const recorder = new AudioRecorder();
-
-        const devices = await recorder.getInputDevices();
-        console.log("main ➡️ devices:", devices);
-
-        recorder.record();
-
-        setTimeout(async () => {
-          const blob = await recorder.stop();
-          console.log("main ➡️ blob:", blob);
-        }, 2000);
-      })();
     });
 
     // Register the status view.
-    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusView(leaf, this.processor));
+    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusViewRenderer(leaf, this.processor));
 
-    this.addRibbonIcon("file-audio", "View VOX Status", () => {
-      this.activateView();
-    });
+    // Register the recorder view.
+    this.registerView(
+      VOX_RECORDER_VIEW,
+      (leaf) => new VoxRecorderViewRenderer(leaf, this.processor, this.recorder, this)
+    );
+
+    this.addRibbonIcon("file-audio", "View VOX Status", () => this.activateView(VOX_STATUS_VIEW));
+    this.addRibbonIcon("mic", "Record with VOX", () => this.activateView(VOX_RECORDER_VIEW));
   }
 
   async onunload(): Promise<void> {
@@ -81,10 +75,10 @@ export default class VoxPlugin extends Plugin {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
-  async activateView() {
+  async activateView(type: string) {
     const { workspace } = this.app;
 
-    const leaves = workspace.getLeavesOfType(VOX_STATUS_VIEW);
+    const leaves = workspace.getLeavesOfType(type);
 
     if (leaves.length > 0) {
       // A leaf with our view already exists, use that
@@ -94,10 +88,7 @@ export default class VoxPlugin extends Plugin {
       // in the right sidebar for it
       this.leaf = workspace.getRightLeaf(false);
 
-      await this.leaf.setViewState({
-        type: VOX_STATUS_VIEW,
-        active: true,
-      });
+      await this.leaf.setViewState({ type, active: true });
     }
 
     // "Reveal" the leaf in case it is in a collapsed sidebar

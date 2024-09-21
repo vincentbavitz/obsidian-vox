@@ -1,4 +1,14 @@
+import { randomUUID } from "crypto";
 import { writeFile } from "fs/promises";
+
+type RecordingState = "idle" | "recording" | "paused";
+
+export type AudioRecorderState = {
+  recordingState: RecordingState;
+  blob: Blob | null;
+};
+
+type StateSubscriberMap = Record<string, (state: AudioRecorderState) => void>;
 
 /**
  * A class to handle recording audio from a selected input device.
@@ -9,14 +19,22 @@ export default class AudioRecorder {
   private audioBlobPromise!: Promise<Blob>;
   private stream!: MediaStream;
 
+  private subscribers: StateSubscriberMap = {};
+  public state: AudioRecorderState;
+
+  constructor() {
+    this.state = {
+      recordingState: "idle",
+      blob: null,
+    };
+  }
+
   /**
    * Retrieves a list of available audio input devices (microphones).
    * @returns A promise that resolves to an array of input devices.
    */
   public async getInputDevices(): Promise<MediaDeviceInfo[]> {
     const devices = await navigator.mediaDevices.enumerateDevices();
-
-    console.log("index ➡️ devices:", devices);
     return devices.filter((device) => device.kind === "audioinput");
   }
 
@@ -25,11 +43,16 @@ export default class AudioRecorder {
    * @param deviceId The device ID of the selected input device.
    * @returns A promise that resolves when recording starts.
    */
-  public async record(deviceId?: string): Promise<void> {
+  public async record(preferredDeviceId?: string | null): Promise<void> {
+    this.state.blob = null;
+
+    const devices = await this.getInputDevices();
+    const isPreferredDeviceAvailable = preferredDeviceId && devices.map((s) => s.deviceId).includes(preferredDeviceId);
+
     // Request microphone access for the selected device
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        deviceId: deviceId ? { exact: deviceId } : undefined,
+        deviceId: isPreferredDeviceAvailable ? { exact: preferredDeviceId } : undefined,
       },
     });
 
@@ -39,6 +62,7 @@ export default class AudioRecorder {
 
     // Capture audio data
     this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
+      console.log("index ➡️ event.data:", event.data);
       this.audioChunks.push(event.data);
     };
 
@@ -52,21 +76,28 @@ export default class AudioRecorder {
 
     // Start recording
     this.mediaRecorder.start();
+
+    this.state.recordingState = "recording";
+    this.notifySubscribers();
   }
 
   /**
    * Stops the recording and returns the recorded audio blob.
    * @returns A promise that resolves to the Blob containing the recorded audio data.
    */
-  public stop(): Promise<Blob> {
+  public async stop(): Promise<Blob> {
     // Stop the MediaRecorder
     this.mediaRecorder.stop();
+    this.state.recordingState = "idle";
 
     // Stop all media tracks to release the microphone
     this.stream.getTracks().forEach((track) => track.stop());
 
     // Return the promise with the recorded audio blob
-    return this.audioBlobPromise;
+    this.state.blob = await this.audioBlobPromise;
+    this.notifySubscribers();
+
+    return this.state.blob;
   }
 
   /**
@@ -74,7 +105,9 @@ export default class AudioRecorder {
    */
   public pause(): void {
     if (this.isRecording()) {
+      this.state.recordingState = "paused";
       this.mediaRecorder.pause();
+      this.notifySubscribers();
     }
   }
 
@@ -83,7 +116,9 @@ export default class AudioRecorder {
    */
   public resume(): void {
     if (this.mediaRecorder && this.mediaRecorder.state === "paused") {
+      this.state.recordingState = "recording";
       this.mediaRecorder.resume();
+      this.notifySubscribers();
     }
   }
 
@@ -104,5 +139,27 @@ export default class AudioRecorder {
   public async saveBlobAsFile(blob: Blob, filePath: string): Promise<void> {
     const buffer = Buffer.from(await blob.arrayBuffer());
     await writeFile(filePath, buffer);
+  }
+
+  /**
+   * Subscribe to updates on the audio recorder's state.
+   */
+  public subscribe(callback: (state: AudioRecorderState) => void) {
+    const subscriberId = randomUUID();
+    this.subscribers[subscriberId] = callback;
+
+    // Return a function to unsubscribe
+    return () => this.unsubscribe(subscriberId);
+  }
+
+  private unsubscribe(subscriberId: string) {
+    delete this.subscribers[subscriberId];
+  }
+
+  /**
+   * Run the callback for all of our current subscribers; updating them on our new state.
+   */
+  private notifySubscribers() {
+    Object.values(this.subscribers).forEach((fn) => fn?.(this.state));
   }
 }
