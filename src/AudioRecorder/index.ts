@@ -60,6 +60,9 @@ export default class AudioRecorder {
     this.mediaRecorder = new MediaRecorder(this.stream);
     this.audioChunks = [];
 
+    // Update audioChunks as AudioChunk type to keep track of start/stop times.
+    this.mediaRecorder.onpause;
+
     // Capture audio data
     this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
       console.log("index ➡️ event.data:", event.data);
@@ -69,7 +72,7 @@ export default class AudioRecorder {
     // Create a promise that resolves with the audio blob when recording is stopped
     this.audioBlobPromise = new Promise<Blob>((resolve) => {
       this.mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { type: "audio/wav" });
+        const audioBlob = new Blob(this.audioChunks, { type: "audio/webm;codecs=opus" });
         resolve(audioBlob);
       };
     });

@@ -2,6 +2,15 @@ import { FSWatcher, createReadStream } from "fs";
 import { readFile } from "fs/promises";
 import VoxPlugin from "main";
 
+/**
+ * A chunk of an audio recording measuing the start and stop times as UNIX timestamps.
+ */
+export type AudioChunk = {
+  blob: BlobPart;
+  start: number;
+  stop: number;
+};
+
 export enum VoxStatusItemStatus {
   QUEUED = "QUEUED",
   PROCESSING_AUDIO = "PROCESSING_AUDIO",

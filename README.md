@@ -9,10 +9,8 @@ The *unprocessed* directory is watched for new files; upon discovering a new fil
 Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 100 transcriptions per day, and I will increase this limit to 1000 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server. No personal information is collected or processed.
 
 My intention is for Vox to be as easy to use as possible - however if you feel more secure running your own backend, this will be possible following versions.
- 
-#### Free & Fully Hosted Backend
 
-VOX is all about simplicity and time saving - therefore it's hosted on a dedicated backend with auto-scaling and GPU acceleration. This enables extremely fast transcriptions and remains private by holding data in memory alone. For those would prefer to run things themselves, the option will to use your own backend will be available very soon.
+***Please note** that at this moment, the transcription model is fine-tuned for English and may struggle with other languages.*
 
 #### Status View
 

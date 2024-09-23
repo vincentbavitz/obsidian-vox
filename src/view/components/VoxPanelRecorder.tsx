@@ -108,6 +108,9 @@ const AudioRecorderBox = ({
   const refRecordIcon = React.useRef<HTMLDivElement>(null);
   // const [isRecording, setIsRecording] = React.useState(false);
 
+  // Use these to calculate the duration.
+  // const chunks: AudioChunk[] = []
+
   useEffect(() => {
     if (!refRecordIcon.current) {
       return;
