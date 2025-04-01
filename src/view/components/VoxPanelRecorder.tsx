@@ -17,7 +17,7 @@ type Props = {
 };
 
 const VoxPanelRecorder = (props: Props) => {
-  // const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
+  const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
 
   return (
     <div
@@ -111,6 +111,8 @@ const AudioRecorderBox = ({
   // Use these to calculate the duration.
   // const chunks: AudioChunk[] = []
 
+  console.log("VoxPanelRecorder ➡️ recorderState.chunks:", recorderState.chunks);
+
   useEffect(() => {
     if (!refRecordIcon.current) {
       return;
@@ -158,19 +160,29 @@ const AudioRecorderBox = ({
             padding: "0 0.75em",
           }}
         >
+          <div
+            style={{
+              display: "block",
+              backgroundColor: "#FF0000",
+              height: "4px",
+              width: "4px",
+              borderRadius: "10rem",
+            }}
+          />
           <span>
             13:59 <span style={{ opacity: 0.5 }}>/ 20:00</span>
-          </span>{" "}
+          </span>
+
           <span style={{ opacity: 0.5 }}>19.35 MB</span>
         </div>
 
-        <ActionIcon
+        {/* <ActionIcon
           isDisabled={true}
           icon="x"
           label="Cancel Recording"
           isActive={false}
           onClick={() => recorderStop()}
-        />
+        /> */}
 
         <ActionIcon
           isDisabled={true}

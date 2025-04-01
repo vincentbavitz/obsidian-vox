@@ -1,10 +1,11 @@
 import { randomUUID } from "crypto";
-import { writeFile } from "fs/promises";
+import { AudioChunk } from "types";
 
 type RecordingState = "idle" | "recording" | "paused";
 
 export type AudioRecorderState = {
   recordingState: RecordingState;
+  chunks: AudioChunk[];
   blob: Blob | null;
 };
 
@@ -15,7 +16,6 @@ type StateSubscriberMap = Record<string, (state: AudioRecorderState) => void>;
  */
 export default class AudioRecorder {
   private mediaRecorder!: MediaRecorder;
-  private audioChunks: BlobPart[] = [];
   private audioBlobPromise!: Promise<Blob>;
   private stream!: MediaStream;
 
@@ -25,6 +25,7 @@ export default class AudioRecorder {
   constructor() {
     this.state = {
       recordingState: "idle",
+      chunks: [],
       blob: null,
     };
   }
@@ -58,21 +59,31 @@ export default class AudioRecorder {
 
     // Initialize MediaRecorder and audio chunks array
     this.mediaRecorder = new MediaRecorder(this.stream);
-    this.audioChunks = [];
-
-    // Update audioChunks as AudioChunk type to keep track of start/stop times.
-    this.mediaRecorder.onpause;
+    this.state.chunks = [];
 
     // Capture audio data
     this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
       console.log("index ➡️ event.data:", event.data);
-      this.audioChunks.push(event.data);
+
+      this.state.chunks.push({
+        blob: event.data,
+        start: event.timeStamp,
+        stop: Date.now(),
+      });
+
+      this.notifySubscribers();
     };
+
+    this.mediaRecorder.onpause = () => this.mediaRecorder.requestData();
+    this.mediaRecorder.onerror = () => this.mediaRecorder.requestData();
 
     // Create a promise that resolves with the audio blob when recording is stopped
     this.audioBlobPromise = new Promise<Blob>((resolve) => {
       this.mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { type: "audio/webm;codecs=opus" });
+        const data = this.state.chunks.map((chunk) => chunk.blob);
+        const audioBlob = new Blob(data, { type: "audio/webm;codecs=opus" });
+
+        this.notifySubscribers();
         resolve(audioBlob);
       };
     });
@@ -98,6 +109,7 @@ export default class AudioRecorder {
 
     // Return the promise with the recorded audio blob
     this.state.blob = await this.audioBlobPromise;
+
     this.notifySubscribers();
 
     return this.state.blob;
@@ -140,8 +152,8 @@ export default class AudioRecorder {
    * @returns A promise that resolves when the file is saved.
    */
   public async saveBlobAsFile(blob: Blob, filePath: string): Promise<void> {
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    await writeFile(filePath, buffer);
+    // const buffer = Buffer.from(await blob.arrayBuffer());
+    // await writeFile(filePath, buffer);
   }
 
   /**
