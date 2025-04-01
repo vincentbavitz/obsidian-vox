@@ -170,15 +170,16 @@ export class TranscriptionProcessor {
       this.setCanditateStatus(audioFile, VoxStatusItemStatus.FAILED);
 
       console.warn(error);
+
       if (isAxiosError(error)) {
         if (error.response?.status === HttpStatusCode.TooManyRequests) {
           new Notice("You've reached your transcription limit for today.");
         } else {
           new Notice("Error connecting to transcription host. Please check your settings.");
         }
-
-        this.queue.pause();
       }
+
+      this.queue.pause();
     }
   }
 
@@ -223,13 +224,13 @@ export class TranscriptionProcessor {
       if (isAxiosError(error)) {
         console.warn(error);
         new Notice("Error connecting to transcription host. Please check your settings.");
-
-        return null;
+      } else {
+        new Notice("There was an issue transcribing file.");
       }
-    }
 
-    new Notice("There was an issue transcribing file.");
-    return null;
+      this.queue.pause();
+      return null;
+    }
   }
 
   /**
