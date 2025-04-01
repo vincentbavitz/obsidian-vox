@@ -3,10 +3,20 @@ import { AudioChunk } from "types";
 
 type RecordingState = "idle" | "recording" | "paused";
 
+type AudioData = {
+  duration: number;
+  blob: Blob | null;
+  chunks: AudioChunk[];
+
+  /**
+   * The timestamp of the start of the current chunk
+   */
+  currentChunkStart: number | null;
+};
+
 export type AudioRecorderState = {
   recordingState: RecordingState;
-  chunks: AudioChunk[];
-  blob: Blob | null;
+  audio: AudioData;
 };
 
 type StateSubscriberMap = Record<string, (state: AudioRecorderState) => void>;
@@ -25,8 +35,12 @@ export default class AudioRecorder {
   constructor() {
     this.state = {
       recordingState: "idle",
-      chunks: [],
-      blob: null,
+      audio: {
+        chunks: [],
+        currentChunkStart: null,
+        duration: 0,
+        blob: null,
+      },
     };
   }
 
@@ -45,7 +59,12 @@ export default class AudioRecorder {
    * @returns A promise that resolves when recording starts.
    */
   public async record(preferredDeviceId?: string | null): Promise<void> {
-    this.state.blob = null;
+    this.state.audio = {
+      currentChunkStart: null,
+      duration: 0,
+      chunks: [],
+      blob: null,
+    };
 
     const devices = await this.getInputDevices();
     const isPreferredDeviceAvailable = preferredDeviceId && devices.map((s) => s.deviceId).includes(preferredDeviceId);
@@ -59,28 +78,44 @@ export default class AudioRecorder {
 
     // Initialize MediaRecorder and audio chunks array
     this.mediaRecorder = new MediaRecorder(this.stream);
-    this.state.chunks = [];
 
-    // Capture audio data
-    this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
-      console.log("index ➡️ event.data:", event.data);
+    const syncCurrentStart = () => {
+      this.state.audio.currentChunkStart = Date.now();
+      this.notifySubscribers();
+    };
 
-      this.state.chunks.push({
-        blob: event.data,
-        start: event.timeStamp,
+    // Sync audio data on each start, resume, pause & error event.
+    this.mediaRecorder.onstart = syncCurrentStart;
+    this.mediaRecorder.onresume = syncCurrentStart;
+    this.mediaRecorder.onpause = () => this.mediaRecorder.requestData();
+    this.mediaRecorder.onerror = () => this.mediaRecorder.requestData();
+
+    // Capture audio data on pause or stop.
+    this.mediaRecorder.ondataavailable = async (event: BlobEvent) => {
+      if (event.data.size === 0 || this.state.audio.currentChunkStart === null) {
+        return;
+      }
+
+      const dataToThisPoint = this.state.audio.chunks.map((c) => c.blob).filter(Boolean) as Blob[];
+      const blobToThisPoint = new Blob([...dataToThisPoint, event.data], { type: "audio/webm;codecs=opus" });
+      const duration = await this.getBlobDuration(blobToThisPoint);
+
+      this.state.audio.chunks.push({
+        start: this.state.audio.currentChunkStart,
         stop: Date.now(),
+        blob: event.data,
       });
+
+      this.state.audio.duration = duration;
+      this.state.audio.currentChunkStart = null;
 
       this.notifySubscribers();
     };
 
-    this.mediaRecorder.onpause = () => this.mediaRecorder.requestData();
-    this.mediaRecorder.onerror = () => this.mediaRecorder.requestData();
-
     // Create a promise that resolves with the audio blob when recording is stopped
     this.audioBlobPromise = new Promise<Blob>((resolve) => {
       this.mediaRecorder.onstop = () => {
-        const data = this.state.chunks.map((chunk) => chunk.blob);
+        const data = this.state.audio.chunks.map((chunk) => chunk.blob);
         const audioBlob = new Blob(data, { type: "audio/webm;codecs=opus" });
 
         this.notifySubscribers();
@@ -108,11 +143,11 @@ export default class AudioRecorder {
     this.stream.getTracks().forEach((track) => track.stop());
 
     // Return the promise with the recorded audio blob
-    this.state.blob = await this.audioBlobPromise;
+    this.state.audio.blob = await this.audioBlobPromise;
 
     this.notifySubscribers();
 
-    return this.state.blob;
+    return this.state.audio.blob;
   }
 
   /**
@@ -176,5 +211,14 @@ export default class AudioRecorder {
    */
   private notifySubscribers() {
     Object.values(this.subscribers).forEach((fn) => fn?.(this.state));
+  }
+
+  private async getBlobDuration(blob: Blob) {
+    const context = new AudioContext();
+    const buffer = await blob.arrayBuffer();
+    const audio = await context.decodeAudioData(buffer);
+    context.close();
+
+    return audio.duration;
   }
 }

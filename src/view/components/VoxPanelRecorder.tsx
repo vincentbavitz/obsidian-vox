@@ -2,7 +2,7 @@ import { AudioRecorderState } from "AudioRecorder";
 import { TranscriptionProcessorState } from "TranscriptionProcessor";
 import VoxPlugin from "main";
 import { setIcon } from "obsidian";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import ActionIcon from "./ActionIcon";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 };
 
 const VoxPanelRecorder = (props: Props) => {
-  const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
+  // const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
 
   return (
     <div
@@ -96,6 +96,13 @@ const FileTranscriptionInfo = () => {
   );
 };
 
+const formatDuration = (durationSeconds: number) => {
+  const SECONDS_IN_MINUTE = 60;
+  const mm = Math.floor(durationSeconds / SECONDS_IN_MINUTE);
+  const ss = Math.floor(durationSeconds % SECONDS_IN_MINUTE);
+  return `${mm}:${ss < 10 ? "0" : ""}${ss}`;
+};
+
 const AudioRecorderBox = ({
   plugin,
   recorderState,
@@ -106,12 +113,8 @@ const AudioRecorderBox = ({
   recorderResume,
 }: Props) => {
   const refRecordIcon = React.useRef<HTMLDivElement>(null);
-  // const [isRecording, setIsRecording] = React.useState(false);
 
-  // Use these to calculate the duration.
-  // const chunks: AudioChunk[] = []
-
-  console.log("VoxPanelRecorder ➡️ recorderState.chunks:", recorderState.chunks);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     if (!refRecordIcon.current) {
@@ -121,7 +124,36 @@ const AudioRecorderBox = ({
     setIcon(refRecordIcon.current, "mic", 22);
   }, [recorderState.recordingState]);
 
-  console.log("VoxPanelRecorder ➡️ recorderState.blob:", recorderState.blob);
+  // Reset duration when recording starts
+  useEffect(() => {
+    if (recorderState.recordingState === "idle") {
+      setDuration(0);
+    }
+  }, [recorderState.recordingState]);
+
+  console.log("VoxPanelRecorder ➡️ duration:", duration);
+
+  // Update real duration each second
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (recorderState.recordingState !== "recording") {
+        return;
+      }
+
+      if (recorderState.audio.currentChunkStart) {
+        const msIntoCurrentChunk = Date.now() - recorderState.audio.currentChunkStart;
+        setDuration(recorderState.audio.duration + msIntoCurrentChunk / 1000);
+      } else {
+        setDuration(recorderState.audio.duration);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const durationFormatted = formatDuration(duration);
 
   return (
     <div
@@ -158,22 +190,24 @@ const AudioRecorderBox = ({
             borderRadius: "var(--radius-m)",
             fontSize: "var(--font-smallest)",
             padding: "0 0.75em",
+            lineHeight: "1em",
           }}
         >
           <div
             style={{
               display: "block",
               backgroundColor: "#FF0000",
-              height: "4px",
-              width: "4px",
+              height: "0.35rem",
+              width: "0.35rem",
               borderRadius: "10rem",
             }}
           />
+
           <span>
-            13:59 <span style={{ opacity: 0.5 }}>/ 20:00</span>
+            {durationFormatted} <span style={{ opacity: 0.5 }}>/ 20:00</span>
           </span>
 
-          <span style={{ opacity: 0.5 }}>19.35 MB</span>
+          {/* <span style={{ opacity: 0.5 }}>19.35 MB</span> */}
         </div>
 
         {/* <ActionIcon

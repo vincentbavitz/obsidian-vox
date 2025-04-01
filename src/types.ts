@@ -6,9 +6,9 @@ import VoxPlugin from "main";
  * A chunk of an audio recording measuing the start and stop times as UNIX timestamps.
  */
 export type AudioChunk = {
-  blob: BlobPart;
   start: number;
   stop: number;
+  blob: BlobPart;
 };
 
 export enum VoxStatusItemStatus {
