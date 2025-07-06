@@ -1,8 +1,5 @@
 # Obsidian Vox - Smart Voice Transcription
 
-> [!NOTE]  
-> Due to massively increased usage, the backend will be down between December 3rd and December 7th 2024 for major backend refactoring and speed and reliability improvements. **The backend will be upgraded to a dedicated 4090 cluster** which requires reconfiguring its container and configuring Kubernetes.
-
 VOX automatically transcribes the audio notes in your Obsidian vault - extracting metadata, categories and tag information. The transcribed text is then placed into its final direcory with its accompanying metadata (frontmatter) and tags.
 
 ![readme_visual_1800](https://github.com/vincentbavitz/obsidian-vox/assets/58160433/10528b09-ab04-49e3-8b24-06457d7abb57)
