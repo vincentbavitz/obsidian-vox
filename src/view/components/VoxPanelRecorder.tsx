@@ -1,8 +1,9 @@
 import { AudioRecorderState } from "AudioRecorder";
 import { TranscriptionProcessorState } from "TranscriptionProcessor";
 import VoxPlugin from "main";
-import { setIcon } from "obsidian";
+import { Notice, setIcon } from "obsidian";
 import React, { useEffect, useState } from "react";
+import { DateTime } from "luxon";
 import ActionIcon from "./ActionIcon";
 
 type Props = {
@@ -14,11 +15,10 @@ type Props = {
   recorderStop: () => Promise<Blob>;
   recorderResume: () => void;
   recorderPause: () => void;
+  onQueueFile?: (filepath: string) => Promise<void>;
 };
 
 const VoxPanelRecorder = (props: Props) => {
-  // const { plugin, recorderState, processorState, recorderStart, recorderStop, recorderPause, recorderResume } = props;
-
   return (
     <div
       style={{
@@ -29,12 +29,119 @@ const VoxPanelRecorder = (props: Props) => {
     >
       <AudioRecorderBox {...props} />
 
-      <FileTranscriptionInfo />
+      <FileTranscriptionInfo
+        plugin={props.plugin}
+        recorderState={props.recorderState}
+        processorState={props.processorState}
+        recorderStop={props.recorderStop}
+        onQueueFile={props.onQueueFile}
+      />
     </div>
   );
 };
 
-const FileTranscriptionInfo = () => {
+type FileTranscriptionInfoProps = {
+  plugin: VoxPlugin;
+  recorderState: AudioRecorderState;
+  processorState: TranscriptionProcessorState;
+  recorderStop: () => Promise<Blob>;
+  handleCancel?: () => void;
+  onQueueFile?: (filepath: string) => Promise<void>;
+};
+
+const FileTranscriptionInfo = ({
+  plugin,
+  recorderState,
+  processorState,
+  recorderStop,
+  onQueueFile,
+}: FileTranscriptionInfoProps) => {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [importance, setImportance] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [isSaving, setIsSaving] = useState(false);
+
+  /**
+   * Generate a default title with "Recording YYYY-MM-DD" format
+   * If a recording with that title already exists, append a number
+   */
+  const generateDefaultTitle = async (): Promise<string> => {
+    const dateStr = DateTime.now().toFormat("yyyy-MM-dd");
+    const baseTitle = `Recording ${dateStr}`;
+    let finalTitle = baseTitle;
+    let counter = 1;
+
+    const watchDir = plugin.settings.watchDirectory;
+    const folder = plugin.app.vault.getAbstractFileByPath(watchDir);
+
+    // Check if title already exists
+    while (folder && "children" in folder) {
+      const children = (folder as any).children as any[];
+      const exists = children.some((file: any) => file.name.startsWith(finalTitle.replace(/\s/g, "-")));
+
+      if (!exists) {
+        break;
+      }
+
+      finalTitle = `${baseTitle} ${counter}`;
+      counter++;
+    }
+
+    return finalTitle;
+  };
+
+  /**
+   * Save the recording to the watch directory and trigger transcription
+   */
+  const handleSaveAndTranscribe = async () => {
+    if (recorderState.audio.blob === null) {
+      new Notice("No recording to save.");
+      return;
+    }
+
+    // Generate default title if empty
+    let finalTitle = title.trim();
+    if (!finalTitle) {
+      finalTitle = await generateDefaultTitle();
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Build the filename with format: R{importance}{categoryKey} {title}.webm
+      const categoryKey = category || "XX";
+      const filename = `R${importance}${categoryKey} ${finalTitle}.webm`;
+      const filepath = `${plugin.settings.watchDirectory}/${filename}`;
+
+      // Convert blob to ArrayBuffer and save
+      const arrayBuffer = await recorderState.audio.blob.arrayBuffer();
+      await plugin.app.vault.adapter.writeBinary(filepath, arrayBuffer);
+
+      // Add to transcription queue
+      if (onQueueFile) {
+        await onQueueFile(filepath);
+      }
+
+      new Notice(`Recording saved: ${finalTitle}`);
+
+      // Reset form
+      setTitle("");
+      setCategory("");
+      setImportance(1);
+
+      // Reset recorder state by clicking stop
+      await recorderStop();
+    } catch (error) {
+      console.error("Error saving recording:", error);
+      new Notice("Error saving recording. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isRecording = recorderState.recordingState !== "idle";
+  const canSave = recorderState.audio.blob !== null && !isRecording && !isSaving;
+
   return (
     <div
       style={{
@@ -50,9 +157,12 @@ const FileTranscriptionInfo = () => {
           backgroundColor: "var(--dropdown-background)",
         }}
         type="text"
-        placeholder="Note title"
+        placeholder="Note title (auto-generated if empty)"
+        value={title}
+        onChange={(e) => setTitle(e.currentTarget.value)}
         spellCheck={false}
-      ></input>
+        disabled={isRecording}
+      />
 
       <div
         style={{
@@ -61,37 +171,38 @@ const FileTranscriptionInfo = () => {
           gap: "0.25em",
         }}
       >
-        <select style={{ flex: 1 }} defaultChecked={true} defaultValue="" className="dropdown">
-          <option value="">Category</option>
-          <option value="RA">Ramble</option>
-          <option>Politics</option>
-          <option>Blah blah</option>
-          <option>Ramble</option>
+        <select
+          style={{ flex: 1 }}
+          value={category}
+          onChange={(e) => setCategory(e.currentTarget.value)}
+          className="dropdown"
+          disabled={isRecording}
+        >
+          <option value="">No category (XX)</option>
+          {Object.entries(plugin.settings.categoryMap).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label} ({key})
+            </option>
+          ))}
         </select>
 
-        <select className="dropdown">
-          <option>1</option>
-          <option>2</option>
-          <option>3</option>
-          <option>4</option>
-          <option>5</option>
+        <select
+          className="dropdown"
+          value={importance}
+          onChange={(e) => setImportance(Number(e.currentTarget.value) as 1 | 2 | 3 | 4 | 5)}
+          disabled={isRecording}
+        >
+          <option value={1}>1</option>
+          <option value={2}>2</option>
+          <option value={3}>3</option>
+          <option value={4}>4</option>
+          <option value={5}>5</option>
         </select>
       </div>
 
-      {/* <div
-        style={{
-          flex: "1",
-          padding: "0.5em",
-          backgroundColor: "var(--background-secondary-alt)",
-          fontSize: "var(--font-smallest)",
-          fontFamily: "var(--font-monospace)",
-          borderRadius: "var(--radius-s)",
-        }}
-      >
-        R0XX {"{{ title }}"}.{}
-      </div> */}
-
-      <button className="disabled mod-cta">Add to queue</button>
+      <button className={`mod-cta${!canSave ? " disabled" : ""}`} onClick={handleSaveAndTranscribe} disabled={!canSave}>
+        {isSaving ? "Saving..." : "Save & transcribe"}
+      </button>
     </div>
   );
 };

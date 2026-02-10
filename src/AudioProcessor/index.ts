@@ -20,7 +20,7 @@ export class AudioProcessor {
     private readonly appId: string,
     private readonly vault: Vault,
     private settings: Settings,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -33,7 +33,7 @@ export class AudioProcessor {
    */
   public async transformAudio(audioFile: FileDetail): Promise<FileDetail> {
     // Is this actually an audio file?
-    const validInputExtensions = [".wav", ".mp3", ".m4a", ".aac", ".ogg"];
+    const validInputExtensions = [".wav", ".mp3", ".m4a", ".aac", ".ogg", ".webm"];
     const desiredExtension = `.${this.settings.audioOutputExtension}`;
 
     if (!audioFile.extension || !validInputExtensions.includes(audioFile.extension)) {
@@ -63,7 +63,7 @@ export class AudioProcessor {
         type: mimetype,
       });
 
-      const response = await axios.postForm<Buffer>(
+      const response = await axios.postForm<ArrayBuffer>(
         url,
         {
           format: this.settings.audioOutputExtension,
@@ -76,7 +76,7 @@ export class AudioProcessor {
             [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
           },
           responseType: "arraybuffer",
-        }
+        },
       );
 
       if (!response.data || response.status !== 200) {
@@ -87,7 +87,7 @@ export class AudioProcessor {
       }
 
       await this.vault.adapter.mkdir(outputCachedFileDetail.directory);
-      await this.vault.adapter.writeBinary(outputCachedFileDetail.filepath, response.data);
+      await this.vault.adapter.writeBinary(outputCachedFileDetail.filepath, response.data as ArrayBuffer);
     } else {
       const exists = await this.vault.exists(outputCachedFileDetail.filepath);
 

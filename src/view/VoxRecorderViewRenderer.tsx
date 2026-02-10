@@ -27,7 +27,7 @@ export class VoxRecorderViewRenderer extends ItemView {
     readonly leaf: WorkspaceLeaf,
     private processor: TranscriptionProcessor,
     private recorder: AudioRecorder,
-    private plugin: VoxPlugin
+    private plugin: VoxPlugin,
   ) {
     super(leaf);
 
@@ -78,6 +78,12 @@ export class VoxRecorderViewRenderer extends ItemView {
       return null;
     }
 
+    const handleQueueFile = async (filepath: string) => {
+      const transcribedFilesInfo = await this.processor.getTranscribedFiles();
+      const candidate = await this.processor.getTranscribedStatus(filepath, transcribedFilesInfo);
+      await this.processor.queueFile(candidate);
+    };
+
     this.root.render(
       <React.StrictMode>
         <VoxPanelRecorder
@@ -88,8 +94,9 @@ export class VoxRecorderViewRenderer extends ItemView {
           recorderStop={() => this.recorder.stop()}
           recorderPause={() => this.recorder.pause()}
           recorderResume={() => this.recorder.resume()}
+          onQueueFile={handleQueueFile}
         />
-      </React.StrictMode>
+      </React.StrictMode>,
     );
   }
 
