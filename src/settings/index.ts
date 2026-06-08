@@ -13,8 +13,7 @@ const HIDDEN_CLASS = "st-hidden";
 export interface Settings {
   apiKey: string;
 
-  isSelfHosted: boolean;
-  selfHostedEndpoint: string;
+  endpoint: string;
 
   recordingDeviceId: string | null;
 
@@ -41,8 +40,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   apiKey: "",
 
-  isSelfHosted: false,
-  selfHostedEndpoint: "",
+  endpoint: "http://localhost:8000",
 
   recordingDeviceId: null,
 
@@ -93,7 +91,7 @@ export class VoxSettingTab extends PluginSettingTab {
     this.addTags();
     this.addCategorisation();
 
-    this.addSelfHostToggle();
+    this.addSelfHostLocation();
   }
 
   addCategoryHeading(category: string, margin = false): void {
@@ -134,7 +132,7 @@ export class VoxSettingTab extends PluginSettingTab {
     new Setting(this.containerEl)
       .setName("Watch Location")
       .setDesc(
-        "The plugin will watch this location for voice-memos to process and automatically trascribe any new audio files."
+        "The plugin will watch this location for voice-memos to process and automatically trascribe any new audio files.",
       )
       .addSearch((cb) => {
         new FolderSuggest(cb.inputEl);
@@ -183,7 +181,7 @@ export class VoxSettingTab extends PluginSettingTab {
     description.append(
       "When enabled, remove the original file from the watch directory.",
       description.createEl("br"),
-      "Note - the audio file will always be copied into the processed directory and linked to your markdown automatically."
+      "Note - the audio file will always be copied into the processed directory and linked to your markdown automatically.",
     );
 
     new Setting(this.containerEl)
@@ -223,7 +221,7 @@ export class VoxSettingTab extends PluginSettingTab {
         });
       });
 
-    this.addTagLimit(), this.addTagsList();
+    (this.addTagLimit(), this.addTagsList());
     this.toggleSettingsVisibility(TAG_SETTINGS_CLASS, this.plugin.settings.shouldExtractTags);
   }
 
@@ -273,7 +271,7 @@ export class VoxSettingTab extends PluginSettingTab {
       .setName("Custom Tags")
       .setClass(TAG_SETTINGS_CLASS)
       .setDesc(
-        "Transcripts which include references to these tags will inclue them in the generated markdown file. Separate tags with commas."
+        "Transcripts which include references to these tags will inclue them in the generated markdown file. Separate tags with commas.",
       )
       .addTextArea((cb) => {
         cb.inputEl.style.minWidth = "4rem";
@@ -306,7 +304,7 @@ export class VoxSettingTab extends PluginSettingTab {
     new Setting(this.containerEl)
       .setName("Enable Filename Categorisation")
       .setDesc(
-        "Categorise your transcriptions depending on the audio's filename prefix. Please see the plugin homepage for more information."
+        "Categorise your transcriptions depending on the audio's filename prefix. Please see the plugin homepage for more information.",
       )
       .addToggle((cb) => {
         cb.setValue(this.plugin.settings.shouldUseCategoryMaps);
@@ -516,34 +514,16 @@ export class VoxSettingTab extends PluginSettingTab {
     categoryMapSetting.infoEl.remove();
   }
 
-  addSelfHostToggle(): void {
-    new Setting(this.containerEl).setName("Use Self-Hosted Backend").addToggle((cb) => {
-      cb.setValue(this.plugin.settings.isSelfHosted);
-      cb.onChange((selfHosted) => {
-        this.plugin.settings.isSelfHosted = selfHosted;
-        this.plugin.saveSettings();
-
-        this.toggleSettingsVisibility(SELF_HOSTING_CLASS, selfHosted);
-      });
-    });
-
-    this.addSelfHostLocation();
-
-    this.toggleSettingsVisibility(SELF_HOSTING_CLASS, this.plugin.settings.isSelfHosted);
-  }
-
   addSelfHostLocation(): void {
     const description = document.createDocumentFragment();
     description.append(
-      "The location of your self-hosted back-end; supports IP addresses and hostnames.",
-      description.createEl("br"),
-      "Please remember to inclued your protocol; ",
-      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
-      "or",
-      description.createEl("code", { text: "https://", cls: "st-inline-code" }),
-      " and port; ",
-      description.createEl("code", { text: "1337", cls: "st-inline-code" }),
-      "."
+      "Local Docker: ",
+      description.createEl("code", { text: "http://localhost:8000", cls: "st-inline-code" }),
+      ", Remote (Tailscale): ",
+      description.createEl("code", { text: "http://100.x.x.x:8000", cls: "st-inline-code" }),
+      ", Custom: include protocol and port (e.g., ",
+      description.createEl("code", { text: "https://your-host:8000", cls: "st-inline-code" }),
+      ")",
     );
 
     const containerEl = this.containerEl.createEl("div", {
@@ -551,20 +531,20 @@ export class VoxSettingTab extends PluginSettingTab {
     });
 
     new Setting(containerEl)
-      .setName("Self Hosted Backend Location")
+      .setName("Backend URL")
       .setDesc(description)
       .addText((cb) => {
-        if (!this.plugin.settings.selfHostedEndpoint.match(VALID_HOST_REGEX)) {
+        if (!this.plugin.settings.endpoint.match(VALID_HOST_REGEX)) {
           cb.inputEl.style.borderColor = "red";
         }
 
-        cb.setPlaceholder("http://10.0.0.1:1337");
-        cb.setValue(this.plugin.settings.selfHostedEndpoint);
+        cb.setPlaceholder("http://localhost:8000");
+        cb.setValue(this.plugin.settings.endpoint);
         cb.onChange((newHost) => {
           if (newHost.match(VALID_HOST_REGEX)) {
             cb.inputEl.style.borderColor = "unset";
 
-            this.plugin.settings.selfHostedEndpoint = newHost;
+            this.plugin.settings.endpoint = newHost;
             this.plugin.saveSettings();
           } else {
             cb.inputEl.style.borderColor = "red";

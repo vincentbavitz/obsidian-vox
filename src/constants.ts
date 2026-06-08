@@ -1,7 +1,7 @@
 import { Settings } from "settings";
 
 export const CACHE_DIRECTORY = ".obsidian/.vox-cache";
-export const PUBLIC_API_ENDPOINT = "https://api.obsidian-vox.org:1337";
+// export const PUBLIC_API_ENDPOINT = "https://api.obsidian-vox.org:1337";
 
 export const OBSIDIAN_VAULT_ID_HEADER_KEY = "obsidian-vault-id";
 export const OBSIDIAN_API_KEY_HEADER_KEY = "obsidian-vox-api-key";
@@ -12,7 +12,7 @@ export const GIT_COMMMIT_DATE_FORMAT = "yyyy-MM-dd hh:mm";
 
 export const VALID_HOST_REGEX = new RegExp(
   "^http(s)?://[a-z0-9-]*.[a-z0-9-]*.?([a-z0-9-]*)?.?([a-z0-9-]*)?:[0-9]{2,6}$",
-  "gmi"
+  "gmi",
 );
 
 /**
@@ -33,6 +33,6 @@ export const generateCategoryRegex = (settings: Settings) => {
   return new RegExp(
     `^(R[1-5](${Object.keys(settings.categoryMap)
       .map((k) => `(${k})`)
-      .join("|")}))\\s`
+      .join("|")}))\\s`,
   );
 };

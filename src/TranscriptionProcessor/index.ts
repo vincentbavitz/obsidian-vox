@@ -18,12 +18,7 @@ import {
 } from "types";
 import { extractFileDetail } from "utils/format";
 import { Logger } from "utils/log";
-import {
-  CACHE_DIRECTORY,
-  OBSIDIAN_API_KEY_HEADER_KEY,
-  OBSIDIAN_VAULT_ID_HEADER_KEY,
-  PUBLIC_API_ENDPOINT,
-} from "../constants";
+import { CACHE_DIRECTORY, OBSIDIAN_API_KEY_HEADER_KEY, OBSIDIAN_VAULT_ID_HEADER_KEY } from "../constants";
 import { Settings } from "../settings";
 
 type TranscribedItem = {
@@ -63,7 +58,7 @@ export class TranscriptionProcessor {
     private readonly app: App,
     private settings: Settings,
     private readonly logger: Logger,
-    private readonly plugin: VoxPlugin
+    private readonly plugin: VoxPlugin,
   ) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger, this.plugin);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
@@ -184,8 +179,7 @@ export class TranscriptionProcessor {
   }
 
   private async transcribe(audioFile: FileDetail): Promise<TranscriptionResponse | null> {
-    const host = this.settings.isSelfHosted ? this.settings.selfHostedEndpoint : PUBLIC_API_ENDPOINT;
-
+    const host = this.settings.endpoint;
     const url = `${host}/transcribe`;
 
     const mimetype = `audio/${audioFile.extension.replace(".", "")}`;
@@ -210,7 +204,7 @@ export class TranscriptionProcessor {
           },
           timeout: 20 * ONE_MINUTE_IN_MS,
           responseType: "json",
-        }
+        },
       );
 
       if (!response.data || response.status !== 200) {
@@ -336,7 +330,7 @@ export class TranscriptionProcessor {
           originalAudioFileName: (filename as string) ?? "",
           originalAudioFileHash: (hash as string) ?? "",
         };
-      })
+      }),
     );
 
     return transcribedFilesInfo;
@@ -344,7 +338,7 @@ export class TranscriptionProcessor {
 
   public async getTranscribedStatus(
     filepath: string,
-    transcribedItems: TranscribedItem[]
+    transcribedItems: TranscribedItem[],
   ): Promise<TranscriptionCandidate> {
     const detail = extractFileDetail(filepath);
 

@@ -1,5 +1,5 @@
 import AudioRecorder from "AudioRecorder";
-import { Plugin, TAbstractFile, WorkspaceLeaf, debounce } from "obsidian";
+import { debounce, Notice, Plugin, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
 import { VOX_RECORDER_VIEW, VoxRecorderViewRenderer } from "view/VoxRecorderViewRenderer";
@@ -7,6 +7,7 @@ import { VOX_STATUS_VIEW, VoxStatusViewRenderer } from "view/VoxStatusViewRender
 import { TranscriptionProcessor } from "./TranscriptionProcessor";
 
 const WATCHER_DELAY_MS = 10_000;
+const HEALTH_CHECK_TIMEOUT_MS = 3000;
 
 export default class VoxPlugin extends Plugin {
   public settings: Settings;
@@ -31,6 +32,9 @@ export default class VoxPlugin extends Plugin {
 
     // Give the app time to load in plugins and run its index check.
     this.app.workspace.onLayoutReady(() => {
+      // Check if backend is reachable
+      this.checkBackendHealth();
+
       this.queueUnprocessedFiles();
 
       // Then watch for any changes...
@@ -55,7 +59,7 @@ export default class VoxPlugin extends Plugin {
     // Register the recorder view.
     this.registerView(
       VOX_RECORDER_VIEW,
-      (leaf) => new VoxRecorderViewRenderer(leaf, this.processor, this.recorder, this)
+      (leaf) => new VoxRecorderViewRenderer(leaf, this.processor, this.recorder, this),
     );
 
     this.addRibbonIcon("file-audio", "View VOX Status", () => this.activateView(VOX_STATUS_VIEW));
@@ -102,5 +106,41 @@ export default class VoxPlugin extends Plugin {
 
     // Queue a reasonable subset the files that have yet to be processed.
     this.processor.queueFiles();
+  }
+
+  private async checkBackendHealth() {
+    try {
+      const backendUrl = this.settings.endpoint;
+      const healthUrl = `${backendUrl}/health`;
+
+      // Create a promise that rejects after timeout
+      const timeoutPromise = new Promise<Response>((_, reject) =>
+        setTimeout(() => reject(new Error("Health check timeout")), HEALTH_CHECK_TIMEOUT_MS),
+      );
+
+      // Race between the fetch and timeout
+      const response = await Promise.race([
+        fetch(healthUrl, { method: "GET" }).catch((error) => {
+          throw new Error(`Fetch error: ${error.message}`);
+        }),
+        timeoutPromise,
+      ]);
+
+      if (!response.ok) {
+        throw new Error(`Health check failed: ${response.statusText}`);
+      }
+
+      this.logger.log(`Backend health check passed: ${backendUrl}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.log(`Backend health check failed: ${message}`);
+
+      // Show warning notice to user
+      new Notice(
+        `⚠️ Vox backend unreachable. ` +
+          `Please start docker-compose or update the backend URL in settings. ` +
+          `(${this.settings.endpoint})`,
+      );
+    }
   }
 }

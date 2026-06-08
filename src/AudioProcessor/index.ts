@@ -11,7 +11,6 @@ import {
   FILENAME_DATE_FORMAT,
   OBSIDIAN_API_KEY_HEADER_KEY,
   OBSIDIAN_VAULT_ID_HEADER_KEY,
-  PUBLIC_API_ENDPOINT,
   generateCategoryRegex,
 } from "../constants";
 
@@ -53,7 +52,7 @@ export class AudioProcessor {
     if (shouldConvertFile) {
       this.logger.log(`Converting audio file: "${audioFile.filename}"`);
 
-      const host = this.settings.isSelfHosted ? this.settings.selfHostedEndpoint : PUBLIC_API_ENDPOINT;
+      const host = this.settings.endpoint;
 
       const url = `${host}/convert/audio`;
       const mimetype = `audio/${this.settings.audioOutputExtension}`;
@@ -63,21 +62,17 @@ export class AudioProcessor {
         type: mimetype,
       });
 
-      const response = await axios.postForm<ArrayBuffer>(
-        url,
-        {
-          format: this.settings.audioOutputExtension,
-          audio_file: audioBlobFile,
+      const form = new FormData();
+      form.append("format", this.settings.audioOutputExtension);
+      form.append("audio_file", audioBlobFile);
+
+      const response = await axios.postForm<ArrayBuffer>(url, form, {
+        headers: {
+          [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.appId,
+          [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
         },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.appId,
-            [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
-          },
-          responseType: "arraybuffer",
-        },
-      );
+        responseType: "arraybuffer",
+      });
 
       if (!response.data || response.status !== 200) {
         const error = "There was an error converting audio during transcription.";
