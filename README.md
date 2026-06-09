@@ -6,9 +6,7 @@ VOX automatically transcribes the audio notes in your Obsidian vault - extractin
 
 The *unprocessed* directory is watched for new files; upon discovering a new file it will trigger the transcription and save the file to your vault.
 
-Currently your transcriptions are processed on a remote server I set up specifically for Vox at no expense to the users of the plugin. You are limited to 100 transcriptions per day, and I will increase this limit to 1000 per day per Vault if there is capacity. Files are only held in memory as buffers and are not saved to disk on the server. No personal information is collected or processed.
-
-My intention is for Vox to be as easy to use as possible - however if you feel more secure running your own backend, this will be possible following versions.
+Vox is **fully self-hosted** — transcription runs on your own machine via a local Docker backend. No data leaves your machine, no accounts required, no cost beyond your hardware.
 
 ***Please note** that at this moment, the transcription model is fine-tuned for English and may struggle with other languages.*
 
@@ -112,5 +110,13 @@ A built in audio recorder would prompt users for the voice note category and imp
 
 ## Self Hosting
 
-Self Hosting will be available in future versions - I am working out some technical details on the back-end to make self-hosting simple and easy.
-<!-- See my repository [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend) for instructions on self-hosting. -->
+The backend runs entirely on your machine. See `backend/README.md` for full setup, but the short version:
+
+```bash
+cd backend
+docker compose up --build
+```
+
+This starts the backend on **http://localhost:8000**. The first run downloads the Whisper model (~470 MB). In the plugin settings, set the backend URL to `http://localhost:8000` (the default).
+
+To access your backend from another device (e.g. phone → home server), install [Tailscale](https://tailscale.com/) and point the plugin at your machine's Tailscale IP: `http://100.x.x.x:8000`.

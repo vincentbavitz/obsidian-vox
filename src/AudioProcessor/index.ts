@@ -1,5 +1,4 @@
-import axios from "axios";
-import { Notice, Vault } from "obsidian";
+import { Notice, RequestUrlParam, Vault, requestUrl } from "obsidian";
 import path from "path";
 import { Settings } from "settings";
 import { FileDetail } from "types";
@@ -55,26 +54,27 @@ export class AudioProcessor {
       const host = this.settings.endpoint;
 
       const url = `${host}/convert/audio`;
-      const mimetype = `audio/${this.settings.audioOutputExtension}`;
 
-      const audioBlob = new Blob([audioBinary], { type: mimetype });
-      const audioBlobFile = new File([audioBlob], audioFile.filename, {
-        type: mimetype,
+      const params = new URLSearchParams({
+        format: this.settings.audioOutputExtension,
+        filename: audioFile.filename,
       });
 
-      const form = new FormData();
-      form.append("format", this.settings.audioOutputExtension);
-      form.append("audio_file", audioBlobFile);
-
-      const response = await axios.postForm<ArrayBuffer>(url, form, {
+      const request: RequestUrlParam = {
+        url: `${url}?${params.toString()}`,
+        method: "POST",
+        contentType: "application/octet-stream",
+        body: audioBinary,
         headers: {
           [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.appId,
           [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
         },
-        responseType: "arraybuffer",
-      });
+        throw: false,
+      };
 
-      if (!response.data || response.status !== 200) {
+      const response = await requestUrl(request);
+
+      if (response.status !== 200) {
         const error = "There was an error converting audio during transcription.";
 
         new Notice(error);
@@ -82,7 +82,7 @@ export class AudioProcessor {
       }
 
       await this.vault.adapter.mkdir(outputCachedFileDetail.directory);
-      await this.vault.adapter.writeBinary(outputCachedFileDetail.filepath, response.data as ArrayBuffer);
+      await this.vault.adapter.writeBinary(outputCachedFileDetail.filepath, response.arrayBuffer);
     } else {
       const exists = await this.vault.exists(outputCachedFileDetail.filepath);
 

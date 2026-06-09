@@ -1,12 +1,12 @@
 import { AudioProcessor } from "AudioProcessor";
 import { MarkdownProcessor } from "MarkdownProcessor";
-import axios, { HttpStatusCode, isAxiosError } from "axios";
+import { HttpStatusCode, isAxiosError } from "axios";
 import { randomUUID } from "crypto";
 import matter from "gray-matter";
 import { sha1 } from "hash-wasm";
 import shuffle from "lodash/shuffle";
 import VoxPlugin from "main";
-import { App, Notice, TFile, TFolder, Vault } from "obsidian";
+import { App, Notice, RequestUrlParam, TFile, TFolder, Vault, requestUrl } from "obsidian";
 import PQueue from "p-queue";
 import {
   FileDetail,
@@ -33,8 +33,6 @@ type TranscriptionCandidate = FileDetail & {
   isTranscribed: boolean;
   hash: string;
 };
-
-const ONE_MINUTE_IN_MS = 60_000;
 
 export type TranscriptionProcessorState = {
   running: boolean;
@@ -150,6 +148,10 @@ export class TranscriptionProcessor {
       this.setCanditateStatus(audioFile, VoxStatusItemStatus.TRANSCRIBING);
       const transcribed = await this.transcribe(processedAudio);
 
+      if (!transcribed) {
+        throw new Error(`Transcription failed for "${audioFile.filename}"`);
+      }
+
       if (transcribed && transcribed.segments) {
         const markdown = await this.markdownProcessor.generate(audioFile, processedAudio, audioFile.hash, transcribed);
 
@@ -182,46 +184,34 @@ export class TranscriptionProcessor {
     const host = this.settings.endpoint;
     const url = `${host}/transcribe`;
 
-    const mimetype = `audio/${audioFile.extension.replace(".", "")}`;
-
     const audioBinary = await this.app.vault.adapter.readBinary(audioFile.filepath);
-    const audioBlob = new Blob([audioBinary], { type: mimetype });
-    const audioBlobFile = new File([audioBlob], audioFile.filename, {
-      type: mimetype,
-    });
+    const params = new URLSearchParams({ filename: audioFile.filename });
+
+    const request: RequestUrlParam = {
+      url: `${url}?${params}`,
+      method: "POST",
+      contentType: "application/octet-stream",
+      body: audioBinary,
+      headers: {
+        [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.app.appId,
+        [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
+      },
+      throw: false,
+    };
 
     try {
-      const response = await axios.postForm<TranscriptionResponse>(
-        url,
-        {
-          audio_file: audioBlobFile,
-        },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            [OBSIDIAN_VAULT_ID_HEADER_KEY]: this.app.appId,
-            [OBSIDIAN_API_KEY_HEADER_KEY]: this.settings.apiKey,
-          },
-          timeout: 20 * ONE_MINUTE_IN_MS,
-          responseType: "json",
-        },
-      );
+      const response = await requestUrl(request);
 
-      if (!response.data || response.status !== 200) {
-        console.warn("Could not transcribe audio:", response);
-
+      if (response.status !== 200) {
+        console.warn("Could not transcribe audio:", response.status, response.text);
         new Notice(`There was an issue transcribing audio: "${audioFile.filename}"`);
+        return null;
       }
 
-      return response.data;
+      return response.json as TranscriptionResponse;
     } catch (error: unknown) {
-      if (isAxiosError(error)) {
-        console.warn(error);
-        new Notice("Error connecting to transcription host. Please check your settings.");
-      } else {
-        new Notice("There was an issue transcribing file.");
-      }
-
+      console.warn(error);
+      new Notice("Error connecting to transcription host. Please check your settings.");
       this.queue.pause();
       return null;
     }
