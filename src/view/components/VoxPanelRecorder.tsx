@@ -1,9 +1,9 @@
 import { AudioRecorderState } from "AudioRecorder";
 import { TranscriptionProcessorState } from "TranscriptionProcessor";
+import { DateTime } from "luxon";
 import VoxPlugin from "main";
 import { Notice, setIcon } from "obsidian";
 import React, { useEffect, useState } from "react";
-import { DateTime } from "luxon";
 import ActionIcon from "./ActionIcon";
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
   recorderStop: () => Promise<Blob>;
   recorderResume: () => void;
   recorderPause: () => void;
+  recorderReset: () => void;
   onQueueFile?: (filepath: string) => Promise<void>;
 };
 
@@ -34,6 +35,7 @@ const VoxPanelRecorder = (props: Props) => {
         recorderState={props.recorderState}
         processorState={props.processorState}
         recorderStop={props.recorderStop}
+        recorderReset={props.recorderReset}
         onQueueFile={props.onQueueFile}
       />
     </div>
@@ -45,25 +47,19 @@ type FileTranscriptionInfoProps = {
   recorderState: AudioRecorderState;
   processorState: TranscriptionProcessorState;
   recorderStop: () => Promise<Blob>;
-  handleCancel?: () => void;
+  recorderReset: () => void;
   onQueueFile?: (filepath: string) => Promise<void>;
 };
 
-const FileTranscriptionInfo = ({
-  plugin,
-  recorderState,
-  processorState,
-  recorderStop,
-  onQueueFile,
-}: FileTranscriptionInfoProps) => {
+const FileTranscriptionInfo = ({ plugin, recorderState, recorderReset, onQueueFile }: FileTranscriptionInfoProps) => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [importance, setImportance] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isSaving, setIsSaving] = useState(false);
 
   /**
-   * Generate a default title with "Recording YYYY-MM-DD" format
-   * If a recording with that title already exists, append a number
+   * Generate a default title with "Recording YYYY-MM-DD" format.
+   * If a recording with that title already exists, append a number.
    */
   const generateDefaultTitle = async (): Promise<string> => {
     const dateStr = DateTime.now().toFormat("yyyy-MM-dd");
@@ -74,7 +70,6 @@ const FileTranscriptionInfo = ({
     const watchDir = plugin.settings.watchDirectory;
     const folder = plugin.app.vault.getAbstractFileByPath(watchDir);
 
-    // Check if title already exists
     while (folder && "children" in folder) {
       const children = (folder as any).children as any[];
       const exists = children.some((file: any) => file.name.startsWith(finalTitle.replace(/\s/g, "-")));
@@ -91,7 +86,7 @@ const FileTranscriptionInfo = ({
   };
 
   /**
-   * Save the recording to the watch directory and trigger transcription
+   * Save the recording to the watch directory and trigger transcription.
    */
   const handleSaveAndTranscribe = async () => {
     if (recorderState.audio.blob === null) {
@@ -99,7 +94,6 @@ const FileTranscriptionInfo = ({
       return;
     }
 
-    // Generate default title if empty
     let finalTitle = title.trim();
     if (!finalTitle) {
       finalTitle = await generateDefaultTitle();
@@ -108,29 +102,23 @@ const FileTranscriptionInfo = ({
     setIsSaving(true);
 
     try {
-      // Build the filename with format: R{importance}{categoryKey} {title}.webm
       const categoryKey = category || "XX";
       const filename = `R${importance}${categoryKey} ${finalTitle}.webm`;
       const filepath = `${plugin.settings.watchDirectory}/${filename}`;
 
-      // Convert blob to ArrayBuffer and save
       const arrayBuffer = await recorderState.audio.blob.arrayBuffer();
       await plugin.app.vault.adapter.writeBinary(filepath, arrayBuffer);
 
-      // Add to transcription queue
-      if (onQueueFile) {
-        await onQueueFile(filepath);
-      }
+      // The vault 'create' event watcher in main.ts picks this up automatically.
+      // No need to call onQueueFile — that would cause double-transcription.
 
       new Notice(`Recording saved: ${finalTitle}`);
 
-      // Reset form
+      // Reset form and recorder state
       setTitle("");
       setCategory("");
       setImportance(1);
-
-      // Reset recorder state by clicking stop
-      await recorderStop();
+      recorderReset();
     } catch (error) {
       console.error("Error saving recording:", error);
       new Notice("Error saving recording. Please try again.");
@@ -201,7 +189,7 @@ const FileTranscriptionInfo = ({
       </div>
 
       <button className={`mod-cta${!canSave ? " disabled" : ""}`} onClick={handleSaveAndTranscribe} disabled={!canSave}>
-        {isSaving ? "Saving..." : "Save & transcribe"}
+        {isSaving ? "Saving..." : "Transcribe"}
       </button>
     </div>
   );
@@ -215,36 +203,40 @@ const formatDuration = (durationSeconds: number) => {
 };
 
 const AudioRecorderBox = ({
-  plugin,
   recorderState,
-  processorState,
   recorderStart,
   recorderStop,
   recorderPause,
   recorderResume,
+  recorderReset,
 }: Props) => {
   const refRecordIcon = React.useRef<HTMLDivElement>(null);
 
   const [duration, setDuration] = useState(0);
 
+  const isIdle = recorderState.recordingState === "idle";
+  const isRecording = recorderState.recordingState === "recording";
+  const isPaused = recorderState.recordingState === "paused";
+  const hasBlob = recorderState.audio.blob !== null;
+
+  // Set mic icon on the overlay div whenever it mounts (idle + no blob)
   useEffect(() => {
     if (!refRecordIcon.current) {
       return;
     }
-
     setIcon(refRecordIcon.current, "mic", 22);
-  }, [recorderState.recordingState]);
+  }, [isIdle, hasBlob]);
 
-  // Reset duration when recording starts
+  // Reset duration only when returning to true initial state (no recording, no blob)
   useEffect(() => {
-    if (recorderState.recordingState === "idle") {
+    if (isIdle && !hasBlob) {
       setDuration(0);
     }
-  }, [recorderState.recordingState]);
+  }, [isIdle, hasBlob]);
 
-  console.log("VoxPanelRecorder ➡️ duration:", duration);
-
-  // Update real duration each second
+  // Update duration every 500ms while actively recording.
+  // recorderState is a mutable object with a stable reference, so the stale
+  // closure always reads the latest values even with an empty deps array.
   useEffect(() => {
     const intervalId = setInterval(() => {
       if (recorderState.recordingState !== "recording") {
@@ -273,8 +265,8 @@ const AudioRecorderBox = ({
         padding: "0.25em",
         borderRadius: "var(--radius-m)",
         border: "1px solid var(--tab-outline-color)",
-        // backgroundColor: "var(--tab-background-active)",
         backgroundColor: "var(--dropdown-background)",
+        minHeight: "39.5px",
       }}
     >
       <div
@@ -284,11 +276,9 @@ const AudioRecorderBox = ({
           gap: "0.25em",
         }}
       >
-        {recorderState.recordingState === "paused" ? (
-          <ActionIcon icon="mic" label="Resume Recording" onClick={() => recorderResume()} />
-        ) : (
-          <ActionIcon icon="pause" label="Pause Recording" onClick={() => recorderPause()} />
-        )}
+        {/* Left button: pause when recording, resume when paused */}
+        {isRecording && <ActionIcon icon="pause" label="Pause Recording" onClick={recorderPause} />}
+        {isPaused && <ActionIcon icon="mic" label="Resume Recording" onClick={recorderResume} />}
 
         {/* Recording Stats */}
         <div
@@ -317,28 +307,19 @@ const AudioRecorderBox = ({
           <span>
             {durationFormatted} <span style={{ opacity: 0.5 }}>/ 20:00</span>
           </span>
-
-          {/* <span style={{ opacity: 0.5 }}>19.35 MB</span> */}
         </div>
 
-        {/* <ActionIcon
-          isDisabled={true}
-          icon="x"
-          label="Cancel Recording"
-          isActive={false}
-          onClick={() => recorderStop()}
-        /> */}
+        {/* Stop button: finalizes the recording */}
+        {(isRecording || isPaused) && <ActionIcon icon="check" label="Stop Recording" onClick={() => recorderStop()} />}
 
-        <ActionIcon
-          isDisabled={true}
-          icon="check"
-          label="Save Recording"
-          isActive={false}
-          onClick={() => recorderStop()}
-        />
+        {/* Discard button: cancels recording or discards a completed blob */}
+        {(isRecording || isPaused || hasBlob) && (
+          <ActionIcon icon="x" label="Discard Recording" onClick={recorderReset} />
+        )}
       </div>
 
-      {recorderState.recordingState === "idle" && (
+      {/* Mic overlay: click to start recording. Only visible in the initial idle state. */}
+      {isIdle && !hasBlob && (
         <div
           onClick={recorderStart}
           ref={refRecordIcon}

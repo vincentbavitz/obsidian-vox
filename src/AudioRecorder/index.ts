@@ -96,15 +96,18 @@ export default class AudioRecorder {
         return;
       }
 
-      const dataToThisPoint = this.state.audio.chunks.map((c) => c.blob).filter(Boolean) as Blob[];
-      const blobToThisPoint = new Blob([...dataToThisPoint, event.data], { type: "audio/webm;codecs=opus" });
-      const duration = await this.getBlobDuration(blobToThisPoint);
-
+      // Push the chunk synchronously BEFORE any await so that the onstop
+      // handler (which fires before this async callback resumes) can read
+      // complete chunks when building the final blob.
       this.state.audio.chunks.push({
         start: this.state.audio.currentChunkStart,
         stop: Date.now(),
         blob: event.data,
       });
+
+      const dataToThisPoint = this.state.audio.chunks.map((c) => c.blob).filter(Boolean) as Blob[];
+      const blobToThisPoint = new Blob(dataToThisPoint, { type: "audio/webm;codecs=opus" });
+      const duration = await this.getBlobDuration(blobToThisPoint);
 
       this.state.audio.duration = duration;
       this.state.audio.currentChunkStart = null;
@@ -178,6 +181,35 @@ export default class AudioRecorder {
    */
   public isRecording(): boolean {
     return this.mediaRecorder && this.mediaRecorder.state === "recording";
+  }
+
+  /**
+   * Discards any active or completed recording and resets state back to idle.
+   * Safe to call whether recording is in progress or already stopped.
+   */
+  public reset(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      // Detach handlers before stopping to discard any pending data
+      this.mediaRecorder.ondataavailable = null;
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.stop();
+    }
+
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+    }
+
+    // Mutate in place rather than replacing this.state so that stale closures
+    // (e.g. the duration interval in AudioRecorderBox) keep a live reference.
+    this.state.recordingState = "idle";
+    this.state.audio = {
+      chunks: [],
+      currentChunkStart: null,
+      duration: 0,
+      blob: null,
+    };
+
+    this.notifySubscribers();
   }
 
   /**

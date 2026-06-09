@@ -46,8 +46,6 @@ export class VoxRecorderViewRenderer extends ItemView {
     });
 
     this.unsubscribeRecorder = this.recorder.subscribe((state) => {
-      console.log("UPDATED STATE FROM RECORDER", state);
-
       this.state.recorder = state;
       this.render({
         processor: this.processor.state,
@@ -94,6 +92,7 @@ export class VoxRecorderViewRenderer extends ItemView {
           recorderStop={() => this.recorder.stop()}
           recorderPause={() => this.recorder.pause()}
           recorderResume={() => this.recorder.resume()}
+          recorderReset={() => this.recorder.reset()}
           onQueueFile={handleQueueFile}
         />
       </React.StrictMode>,

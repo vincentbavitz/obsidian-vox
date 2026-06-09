@@ -35,7 +35,6 @@
     "typescript": "^4.9.4"
   },
   "devDependencies": {
-    "@types/fluent-ffmpeg": "^2.1.20",
     "@types/lodash": "^4.14.191",
     "@types/luxon": "^3.1.0",
     "@types/node": "^20.2.4",
