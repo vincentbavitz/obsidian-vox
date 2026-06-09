@@ -1,6 +1,6 @@
 {
   "name": "vox",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "author": "vincentbavitz",
   "license": "AGPL-3.0-only",
   "description": "Intelligently create transcripts of voice memos",
