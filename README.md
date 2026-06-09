@@ -28,33 +28,48 @@ As your collection of raw voice notes grows, your ability to search through them
 
 ## Instructions
 
-<!-- ### Setting Up The Backend
+### 1. Set Up the Backend
 
-See [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend) for detailed setup instructions - then simply update the Obsidian plugin setting "*Self Hosted Backend Location*" to your backend's domain or IP and port. You may also run the backend locally and point your backend to `127.0.0.1:1337`.
+Vox requires a local backend to perform transcription. Head to [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend) and follow the setup instructions there — it runs entirely on your own machine via Docker, so nothing leaves your device.
 
-> @note - Systems with less than 8GB of memory may struggle when transcribing audio files over 50MB. -->
+The short version:
 
-### In Obsidian
+```bash
+# CPU (recommended for most users)
+docker compose up --build
 
-1. Enable VOX in Obsidian plugins
-2. Update the plugin settings to suit your input/output folders for your voice notes.
-3. Move a voice note over to your watch directory (eg `<Vault>/Voice/unprocessed`) as a test file
+# GPU — AMD, Intel, or NVIDIA via Vulkan (faster inference)
+docker compose -f docker-compose-gpu.yaml up --build
+```
 
-#### Example Setup - Mobile Only
+The backend starts on **http://localhost:8000** and downloads the Whisper model (~470 MB) on first run.
 
-> - Phone records voice memos using a voice recorder app, saving the files to `<mobile>/path/to/obsidian/your/watch/folder`
-> - Mobile Obsidian app transcribes the voice notes
+### 2. Configure the Plugin
 
-#### Example Setup - Mobile First Desktop Sync
+1. Enable Vox in Obsidian → Settings → Community Plugins
+2. In the Vox settings, set the **Backend URL** to `http://localhost:8000` (the default)
+3. Set your **Watch Directory** (default: `Voice/unprocessed`) and **Output Directory** (default: `Voice`)
+4. Drop a voice note into your watch directory to verify everything is working
 
-> - Phone records voice memos using voice recorder app saving to a location on the phone
-> - Using RSync or Syncthing or another synchronisation tool, phone syncs voice notes to `<desktop>/path/to/obsidian/your/watch/folder`
-> - Desktop Obsidian app transcribes the voice notes
+### Example Setups
 
-#### Example Setup - Desktop First
+#### Desktop (simplest)
 
-> - Desktop/Laptop records voice memo and saves the file directly into Obsidian vault's VOX watch folder
-> - Desktop Obsidian app transcribes the voice notes
+> - Record a voice memo on your desktop and save it directly into `<Vault>/Voice/unprocessed`
+> - The desktop Obsidian plugin picks it up and sends it to the local backend for transcription
+
+#### Mobile → Desktop via Sync
+
+> - Record on your phone using any voice recorder app
+> - Sync audio files to your desktop vault's watch folder using [Syncthing](https://syncthing.net/), iCloud, or similar
+> - The desktop Obsidian plugin transcribes them automatically
+
+#### Mobile → Desktop via Tailscale (no sync app needed)
+
+> - Install [Tailscale](https://tailscale.com/) on both your phone and the machine running the backend
+> - In the Vox plugin settings on your phone's Obsidian app, set the backend URL to your desktop's Tailscale IP: `http://100.x.x.x:8000`
+> - Record voice memos on your phone — they are sent directly to your desktop's backend over the encrypted Tailscale tunnel and transcribed there
+> - No sync tool required; your vault files still live wherever you keep them
 
 
 ## Categorization
@@ -110,13 +125,4 @@ A built in audio recorder would prompt users for the voice note category and imp
 
 ## Self Hosting
 
-The backend runs entirely on your machine. See `backend/README.md` for full setup, but the short version:
-
-```bash
-cd backend
-docker compose up --build
-```
-
-This starts the backend on **http://localhost:8000**. The first run downloads the Whisper model (~470 MB). In the plugin settings, set the backend URL to `http://localhost:8000` (the default).
-
-To access your backend from another device (e.g. phone → home server), install [Tailscale](https://tailscale.com/) and point the plugin at your machine's Tailscale IP: `http://100.x.x.x:8000`.
+See [obsidian-vox-backend](https://github.com/vincentbavitz/obsidian-vox-backend) for full backend setup, configuration options (model size, GPU inference, environment variables), and troubleshooting.
