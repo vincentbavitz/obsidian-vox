@@ -35,6 +35,9 @@ export interface Settings {
   tags: Array<string>;
   tagLimit: number;
   // tagSource: TagMatchSource;
+
+  /** Number of sequential failures before auto-pausing. 0 = never pause automatically. */
+  failurePauseThreshold: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -57,6 +60,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tags: [],
   tagLimit: 5,
   // tagSource: TagMatchSource.VAULT,
+
+  failurePauseThreshold: 5,
 
   categoryMap: {
     LN: "Life Note",
@@ -84,6 +89,7 @@ export class VoxSettingTab extends PluginSettingTab {
 
     this.addAudioExtension();
     this.addDeleteOriginalFile();
+    this.addFailurePauseThreshold();
 
     // Ready for Version 2
     // this.addShouldCommitGit();
@@ -191,6 +197,25 @@ export class VoxSettingTab extends PluginSettingTab {
         cb.setValue(this.plugin.settings.shouldDeleteOriginal);
         cb.onChange((shouldDelete) => {
           this.plugin.settings.shouldDeleteOriginal = shouldDelete;
+          this.plugin.saveSettings();
+        });
+      });
+  }
+
+  addFailurePauseThreshold(): void {
+    new Setting(this.containerEl)
+      .setName("Auto-Pause on Sequential Failures")
+      .setDesc("Automatically pause the transcription queue after this many failures in a row.")
+      .addDropdown((cb) => {
+        cb.addOption("0", "Never pause");
+        cb.addOption("1", "After 1 failure");
+        cb.addOption("5", "After 5 failures");
+        cb.addOption("10", "After 10 failures");
+        cb.addOption("25", "After 25 failures");
+
+        cb.setValue(String(this.plugin.settings.failurePauseThreshold));
+        cb.onChange((value) => {
+          this.plugin.settings.failurePauseThreshold = Number(value);
           this.plugin.saveSettings();
         });
       });

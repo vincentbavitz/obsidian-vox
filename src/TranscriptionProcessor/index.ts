@@ -51,6 +51,7 @@ export class TranscriptionProcessor {
 
   public state: TranscriptionProcessorState;
   private subscribers: StateSubscriberMap = {};
+  private consecutiveFailureCount = 0;
 
   constructor(
     private readonly app: App,
@@ -99,6 +100,7 @@ export class TranscriptionProcessor {
 
   public resume() {
     this.queue.start();
+    this.consecutiveFailureCount = 0;
 
     this.state.running = true;
     this.notifySubscribers();
@@ -159,12 +161,14 @@ export class TranscriptionProcessor {
 
         const notice = `Transcription complete: ${markdown.title}`;
         this.setCanditateStatus(audioFile, VoxStatusItemStatus.COMPLETE);
+        this.consecutiveFailureCount = 0;
 
         this.logger.log(notice);
         new Notice(notice);
       }
     } catch (error: unknown) {
       this.setCanditateStatus(audioFile, VoxStatusItemStatus.FAILED);
+      this.consecutiveFailureCount++;
 
       console.warn(error);
 
@@ -176,7 +180,10 @@ export class TranscriptionProcessor {
         }
       }
 
-      this.queue.pause();
+      const threshold = this.settings.failurePauseThreshold;
+      if (threshold > 0 && this.consecutiveFailureCount >= threshold) {
+        this.queue.pause();
+      }
     }
   }
 
@@ -212,7 +219,6 @@ export class TranscriptionProcessor {
     } catch (error: unknown) {
       console.warn(error);
       new Notice("Error connecting to transcription host. Please check your settings.");
-      this.queue.pause();
       return null;
     }
   }
