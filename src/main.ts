@@ -4,7 +4,9 @@ import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
 import { VOX_RECORDER_VIEW, VoxRecorderViewRenderer } from "view/VoxRecorderViewRenderer";
 import { VOX_STATUS_VIEW, VoxStatusViewRenderer } from "view/VoxStatusViewRenderer";
+import { SummarySelectorModal } from "view/modals/SummarySelectorModal";
 import { TranscriptionProcessor } from "./TranscriptionProcessor";
+import { SummarizationScheduler } from "./SummarizationScheduler";
 
 const WATCHER_DELAY_MS = 10_000;
 const HEALTH_CHECK_TIMEOUT_MS = 3000;
@@ -13,6 +15,7 @@ export default class VoxPlugin extends Plugin {
   public settings: Settings;
 
   private processor: TranscriptionProcessor;
+  private scheduler: SummarizationScheduler;
   private recorder: AudioRecorder;
   private logger: Logger;
 
@@ -28,6 +31,7 @@ export default class VoxPlugin extends Plugin {
 
     this.logger = new Logger(this.manifest);
     this.processor = new TranscriptionProcessor(this.app, this.settings, this.logger, this);
+    this.scheduler = new SummarizationScheduler(this.app, this.settings, this.logger, this);
     this.recorder = new AudioRecorder();
 
     // Give the app time to load in plugins and run its index check.
@@ -36,6 +40,9 @@ export default class VoxPlugin extends Plugin {
       this.checkBackendHealth();
 
       this.queueUnprocessedFiles();
+
+      // Start recurring summary scheduler
+      this.scheduler.start();
 
       // Then watch for any changes...
       const queueFromWatcher = async (file: TAbstractFile) => {
@@ -54,7 +61,7 @@ export default class VoxPlugin extends Plugin {
     });
 
     // Register the status view.
-    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusViewRenderer(leaf, this.processor));
+    this.registerView(VOX_STATUS_VIEW, (leaf) => new VoxStatusViewRenderer(leaf, this.processor, this.scheduler));
 
     // Register the recorder view.
     this.registerView(
@@ -64,6 +71,40 @@ export default class VoxPlugin extends Plugin {
 
     this.addRibbonIcon("file-audio", "View VOX Status", () => this.activateView(VOX_STATUS_VIEW));
     this.addRibbonIcon("mic", "Record with VOX", () => this.activateView(VOX_RECORDER_VIEW));
+
+    // Add summarization commands
+    this.addCommand({
+      id: "vox-generate-weekly-summary",
+      name: "VOX: Generate Weekly Summary",
+      callback: async () => {
+        const periods = await this.scheduler.getAvailableWeeklyPeriods();
+        new SummarySelectorModal(this.app, periods, async (id) => {
+          await this.scheduler.generateWeeklySummary(id);
+        }).open();
+      },
+    });
+
+    this.addCommand({
+      id: "vox-generate-monthly-summary",
+      name: "VOX: Generate Monthly Summary",
+      callback: async () => {
+        const periods = await this.scheduler.getAvailableMonthlyPeriods();
+        new SummarySelectorModal(this.app, periods, async (id) => {
+          await this.scheduler.generateMonthlySummary(id);
+        }).open();
+      },
+    });
+
+    this.addCommand({
+      id: "vox-generate-yearly-summary",
+      name: "VOX: Generate Yearly Summary",
+      callback: async () => {
+        const periods = await this.scheduler.getAvailableYearlyPeriods();
+        new SummarySelectorModal(this.app, periods, async (id) => {
+          await this.scheduler.generateYearlySummary(id);
+        }).open();
+      },
+    });
   }
 
   async onunload(): Promise<void> {
@@ -72,6 +113,7 @@ export default class VoxPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     this.queueUnprocessedFiles();
+    this.scheduler.updateSettings(this.settings);
     return this.saveData(this.settings);
   }
 

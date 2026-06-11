@@ -105,23 +105,68 @@ Here is a list of example categories along with their prefixes...
 
 You may set your own categorization map in the settings - the sky's the limit!
 
+## Intelligent Summaries
+
+VOX now includes built-in AI summarization powered by a local LLM (Ollama). Summaries help you quickly understand the essence of your voice notes without reading the full transcript.
+
+### Per-Transcription Summaries
+
+After each voice note is transcribed, VOX can automatically generate a concise summary using your local LLM:
+
+- **Automatic generation**: Enable in settings → transcriptions are summarized on completion
+- **Smart linking**: Summary files are automatically linked to their source transcriptions (and vice versa)
+- **Custom prompts**: Add your own instructions to the summarization prompt (e.g., "Focus on action items")
+- **Non-fatal**: Summarization failures don't affect transcription — your notes are always preserved
+
+### Recurring Summaries (Weekly, Monthly, Yearly)
+
+VOX automatically generates intelligent periodic summaries that synthesize all your voice notes:
+
+- **Weekly summaries**: Overview of notes recorded in each week, organized by your custom categories (e.g., "Life Notes from this Week", "Insights from this Week")
+- **Monthly summaries**: Built from weekly summaries to preserve detail while staying within token limits
+- **Yearly summaries**: Annual reviews built from monthly summaries
+
+**Smart prerequisites**: The scheduler waits for all lower-level summaries before generating higher-level ones, and respects individual note summarization status.
+
+**Token-aware context hierarchy**: To stay within your LLM's token limit, the system uses:
+- Full transcription text for weekly summaries (falls back to note summaries if too large)
+- Weekly summaries as context for monthly summaries
+- Monthly summaries as context for yearly summaries
+
+### Manual Summary Generation
+
+Use Obsidian commands to manually generate summaries for any period:
+
+- `VOX: Generate Weekly Summary` — choose any completed week
+- `VOX: Generate Monthly Summary` — choose any completed month
+- `VOX: Generate Yearly Summary` — choose any completed year
+
+Each command opens a modal showing available periods with note counts and readiness status. Existing summaries prompt for confirmation before overwriting.
+
+### Settings
+
+- **Enable Summarization**: Toggle per-transcription summarization on/off
+- **Summary Directory**: Where summaries are stored (default: `Voice/Summaries`)
+- **Summarization Prompt**: Custom instructions appended to the default summary prompt
+- **Weekly/Monthly/Yearly Toggles**: Enable auto-generation for each interval
+- **Recurring Summary Prompt**: Custom instructions for periodic summaries (e.g., "Include psychological analysis")
+
+---
+
+## Built-In Audio Recorder
+
+VOX includes a built-in audio recorder directly in Obsidian — no need for external recording apps:
+
+- **Record in-app**: Click the microphone icon in the ribbon to open the recorder
+- **Categorize on-the-fly**: Select your voice memo category and importance rating before or after recording
+- **Automatic processing**: Recorded audio is automatically placed in your watch directory and transcribed
+- **One-click workflow**: Record → categorize → transcribe → summarize — all from within Obsidian
+
 ## Roadmap
 
 #### Templates
 
 Allowing users to build their own templates using shortcodes such as `{{ tags }}`, `{{ transcript }}`, `{{ category }}`.
-
-#### AI Summaries & Extras
-
-In the near-future, VOX will add the open-source Llama model to its backend to fascilitate...
-
-- even smarter tag extraction
-- optionally outputting summaries in the transcribed text to get an overview of the topic matter
-
-
-#### Built In Audio Recorder
-
-A built in audio recorder would prompt users for the voice note category and importance rating after a voice note is made, then automatically transcribe it and place it in the right place in their Vault.
 
 ## Self Hosting
 

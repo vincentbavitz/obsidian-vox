@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import { Root, createRoot } from "react-dom/client";
 import { TranscriptionProcessor, TranscriptionProcessorState } from "TranscriptionProcessor";
+import { SummarizationScheduler, SummarizationSchedulerState } from "SummarizationScheduler";
 import { AppContext } from "./AppContext";
 import { VoxStatus } from "./VoxStatusView";
 
@@ -11,19 +12,27 @@ export const VOX_STATUS_VIEW = "vox-status-view";
 // React dependency, since we need it during the build step.
 // See the following for context: https://github.com/microsoft/TypeScript/issues/49486
 export class VoxStatusViewRenderer extends ItemView {
-  state: TranscriptionProcessorState;
+  processorState: TranscriptionProcessorState;
+  schedulerState: SummarizationSchedulerState;
   root: Root | null = null;
-  private unsubscribe: () => void;
+  private unsubscribeProcessor: () => void;
+  private unsubscribeScheduler: () => void;
 
-  constructor(readonly leaf: WorkspaceLeaf, private processor: TranscriptionProcessor) {
+  constructor(readonly leaf: WorkspaceLeaf, private processor: TranscriptionProcessor, private scheduler: SummarizationScheduler) {
     super(leaf);
 
-    this.state = this.processor.state;
+    this.processorState = this.processor.state;
+    this.schedulerState = this.scheduler.state;
 
-    // Tell our processor to re-render the status view when the status changes.
-    this.unsubscribe = this.processor.subscribe((state) => {
-      this.state = state;
-      this.render(state);
+    // Tell our processors to re-render the status view when the status changes.
+    this.unsubscribeProcessor = this.processor.subscribe((state) => {
+      this.processorState = state;
+      this.render();
+    });
+
+    this.unsubscribeScheduler = this.scheduler.subscribe((state) => {
+      this.schedulerState = state;
+      this.render();
     });
   }
 
@@ -41,10 +50,10 @@ export class VoxStatusViewRenderer extends ItemView {
 
   async onOpen() {
     this.root = createRoot(this.containerEl.children[1]);
-    this.render(this.state);
+    this.render();
   }
 
-  render(state: TranscriptionProcessorState) {
+  render() {
     if (!this.root) {
       return null;
     }
@@ -54,7 +63,8 @@ export class VoxStatusViewRenderer extends ItemView {
         <AppContext.Provider value={this.app}>
           <VoxStatus
             leaf={this.leaf}
-            state={state}
+            processorState={this.processorState}
+            schedulerState={this.schedulerState}
             onClickResume={() => this.processor.resume()}
             onClickPause={() => this.processor.pause()}
           />
@@ -65,6 +75,7 @@ export class VoxStatusViewRenderer extends ItemView {
 
   async onClose() {
     this.root?.unmount();
-    this.unsubscribe();
+    this.unsubscribeProcessor();
+    this.unsubscribeScheduler();
   }
 }

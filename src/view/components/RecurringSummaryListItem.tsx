@@ -1,35 +1,29 @@
 import { setIcon } from "obsidian";
 import React from "react";
-import { VoxStatusItem, VoxStatusItemStatus } from "types";
+import { RecurringSummaryItem, RecurringSummaryStatus } from "types";
 
 const STATUS_LABEL_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "QUEUED",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "PROCESSING",
-  [VoxStatusItemStatus.TRANSCRIBING]: "TRANSCRIBING",
-  [VoxStatusItemStatus.SUMMARIZING]: "SUMMARIZING",
-  [VoxStatusItemStatus.COMPLETE]: "DONE",
-  [VoxStatusItemStatus.FAILED]: "FAILED",
+  [RecurringSummaryStatus.PENDING]: "PENDING",
+  [RecurringSummaryStatus.GENERATING]: "GENERATING",
+  [RecurringSummaryStatus.COMPLETE]: "DONE",
+  [RecurringSummaryStatus.FAILED]: "FAILED",
 };
 
 const STATUS_ICON_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "ellipsis",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "combine",
-  [VoxStatusItemStatus.TRANSCRIBING]: "loader",
-  [VoxStatusItemStatus.SUMMARIZING]: "sparkles",
-  [VoxStatusItemStatus.COMPLETE]: "check",
-  [VoxStatusItemStatus.FAILED]: "circle-slash",
+  [RecurringSummaryStatus.PENDING]: "ellipsis",
+  [RecurringSummaryStatus.GENERATING]: "sparkles",
+  [RecurringSummaryStatus.COMPLETE]: "check",
+  [RecurringSummaryStatus.FAILED]: "circle-slash",
 };
 
 const STATUS_COLOR_MAP = {
-  [VoxStatusItemStatus.QUEUED]: "var(--text-faint)",
-  [VoxStatusItemStatus.PROCESSING_AUDIO]: "var(--color-yellow)",
-  [VoxStatusItemStatus.TRANSCRIBING]: "var(--color-cyan)",
-  [VoxStatusItemStatus.SUMMARIZING]: "var(--color-purple)",
-  [VoxStatusItemStatus.COMPLETE]: "var(--color-green)",
-  [VoxStatusItemStatus.FAILED]: "var(--color-red)",
+  [RecurringSummaryStatus.PENDING]: "var(--text-faint)",
+  [RecurringSummaryStatus.GENERATING]: "var(--color-purple)",
+  [RecurringSummaryStatus.COMPLETE]: "var(--color-green)",
+  [RecurringSummaryStatus.FAILED]: "var(--color-red)",
 };
 
-const VoxStatusListItem = ({ details, status }: VoxStatusItem) => {
+const RecurringSummaryListItem = ({ label, status }: RecurringSummaryItem) => {
   const refIcon = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -55,13 +49,6 @@ const VoxStatusListItem = ({ details, status }: VoxStatusItem) => {
           gap: "0.5em",
         }}
       >
-        {/* <div
-          style={{
-            aspectRatio: "1",
-          }}
-          ref={refIcon}
-        /> */}
-
         <div
           style={{
             display: "flex",
@@ -79,7 +66,7 @@ const VoxStatusListItem = ({ details, status }: VoxStatusItem) => {
               opacity: 0.75,
             }}
           >
-            {details.name}
+            {label}
           </div>
 
           <div
@@ -97,4 +84,4 @@ const VoxStatusListItem = ({ details, status }: VoxStatusItem) => {
   );
 };
 
-export default VoxStatusListItem;
+export default RecurringSummaryListItem;

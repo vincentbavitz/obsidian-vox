@@ -1,5 +1,6 @@
 import { AudioProcessor } from "AudioProcessor";
 import { MarkdownProcessor } from "MarkdownProcessor";
+import { SummarizationProcessor } from "SummarizationProcessor";
 import { HttpStatusCode, isAxiosError } from "axios";
 import { randomUUID } from "crypto";
 import matter from "gray-matter";
@@ -47,6 +48,7 @@ type StateSubscriberMap = Record<string, (state: TranscriptionProcessorState) =>
 export class TranscriptionProcessor {
   private markdownProcessor: MarkdownProcessor;
   private audioProcessor: AudioProcessor;
+  private summarizationProcessor: SummarizationProcessor;
   private queue: PQueue;
 
   public state: TranscriptionProcessorState;
@@ -61,6 +63,7 @@ export class TranscriptionProcessor {
   ) {
     this.markdownProcessor = new MarkdownProcessor(app.vault, settings, logger, this.plugin);
     this.audioProcessor = new AudioProcessor(app.appId, app.vault, settings, logger);
+    this.summarizationProcessor = new SummarizationProcessor(app, settings, logger);
 
     this.queue = new PQueue({ concurrency: 8 });
 
@@ -115,6 +118,7 @@ export class TranscriptionProcessor {
 
   public reset(settings: Settings) {
     this.settings = settings;
+    this.summarizationProcessor.updateSettings(settings);
     this.queue.clear();
 
     this.notifySubscribers();
@@ -157,7 +161,13 @@ export class TranscriptionProcessor {
       if (transcribed && transcribed.segments) {
         const markdown = await this.markdownProcessor.generate(audioFile, processedAudio, audioFile.hash, transcribed);
 
-        await this.consolidateFiles(audioFile, processedAudio, markdown);
+        const { markdownFile } = await this.consolidateFiles(audioFile, processedAudio, markdown);
+
+        // If summarization is enabled, summarize the transcription
+        if (this.settings.shouldSummarize) {
+          this.setCanditateStatus(audioFile, VoxStatusItemStatus.SUMMARIZING);
+          await this.summarizationProcessor.summarizeTranscription(transcribed.text, markdownFile);
+        }
 
         const notice = `Transcription complete: ${markdown.title}`;
         this.setCanditateStatus(audioFile, VoxStatusItemStatus.COMPLETE);

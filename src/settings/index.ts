@@ -7,6 +7,7 @@ import { FolderSuggest } from "./suggesters/FolderSuggester";
 
 const TAG_SETTINGS_CLASS = "st-tag-setting";
 const CATEGORIZATION_SETTINGS_CLASS = "st-cate-setting";
+const SUMMARIZATION_SETTINGS_CLASS = "st-summarization-setting";
 const SELF_HOSTING_CLASS = "self-host-setting";
 const HIDDEN_CLASS = "st-hidden";
 
@@ -38,6 +39,15 @@ export interface Settings {
 
   /** Number of sequential failures before auto-pausing. 0 = never pause automatically. */
   failurePauseThreshold: number;
+
+  /** Summarization settings */
+  shouldSummarize: boolean;
+  summaryDirectory: string;
+  summarizationSystemPrompt: string;
+  shouldEnableWeeklySummaries: boolean;
+  shouldEnableMonthlySummaries: boolean;
+  shouldEnableYearlySummaries: boolean;
+  recurringSummarySystemPrompt: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -69,6 +79,14 @@ export const DEFAULT_SETTINGS: Settings = {
     DR: "Dream",
     RM: "Ramble",
   },
+
+  shouldSummarize: false,
+  summaryDirectory: "Voice/Summaries",
+  summarizationSystemPrompt: "",
+  shouldEnableWeeklySummaries: false,
+  shouldEnableMonthlySummaries: false,
+  shouldEnableYearlySummaries: false,
+  recurringSummarySystemPrompt: "",
 };
 
 export class VoxSettingTab extends PluginSettingTab {
@@ -96,6 +114,8 @@ export class VoxSettingTab extends PluginSettingTab {
 
     this.addTags();
     this.addCategorisation();
+
+    this.addSummarizationSettings();
 
     this.addSelfHostLocation();
   }
@@ -537,6 +557,125 @@ export class VoxSettingTab extends PluginSettingTab {
     }
 
     categoryMapSetting.infoEl.remove();
+  }
+
+  addSummarizationSettings(): void {
+    this.addCategoryHeading("Summarization", true);
+
+    new Setting(this.containerEl)
+      .setName("Enable Summarization")
+      .setDesc("Automatically summarize your transcriptions and generate periodic summaries.")
+      .addToggle((cb) => {
+        cb.setValue(this.plugin.settings.shouldSummarize);
+        cb.onChange((value) => {
+          this.plugin.settings.shouldSummarize = value;
+          this.plugin.saveSettings();
+          this.toggleSettingsVisibility(SUMMARIZATION_SETTINGS_CLASS, value);
+        });
+      });
+
+    this.addSummaryDirectory();
+    this.addSummarizationSystemPrompt();
+    this.addRecurringSummaries();
+
+    this.toggleSettingsVisibility(SUMMARIZATION_SETTINGS_CLASS, this.plugin.settings.shouldSummarize);
+  }
+
+  addSummaryDirectory(): void {
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Summary Directory")
+      .setDesc("Where completed summaries will be stored.")
+      .addSearch((cb) => {
+        new FolderSuggest(cb.inputEl);
+        cb.setPlaceholder("Example: Voice/Summaries")
+          .setValue(this.plugin.settings.summaryDirectory)
+          .onChange((newFolder) => {
+            this.plugin.settings.summaryDirectory = newFolder;
+            this.plugin.saveSettings();
+          });
+      });
+  }
+
+  addSummarizationSystemPrompt(): void {
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Summarization Prompt")
+      .setDesc(
+        "Custom instructions to append to the summarization prompt. For example: 'Include a psychological analysis at the end.'"
+      )
+      .addTextArea((cb) => {
+        cb.inputEl.style.minWidth = "4rem";
+        cb.inputEl.style.maxWidth = "20rem";
+        cb.inputEl.rows = 3;
+
+        cb.setPlaceholder("Enter custom summarization instructions...");
+        cb.setValue(this.plugin.settings.summarizationSystemPrompt);
+        cb.onChange((value) => {
+          this.plugin.settings.summarizationSystemPrompt = value;
+          this.plugin.saveSettings();
+        });
+      });
+  }
+
+  addRecurringSummaries(): void {
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Enable Recurring Summaries")
+      .setDesc("Generate automatic weekly, monthly, and yearly summaries.");
+
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Weekly Summaries")
+      .setDesc("Generate automatic summaries for each completed week.")
+      .addToggle((cb) => {
+        cb.setValue(this.plugin.settings.shouldEnableWeeklySummaries);
+        cb.onChange((value) => {
+          this.plugin.settings.shouldEnableWeeklySummaries = value;
+          this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Monthly Summaries")
+      .setDesc("Generate automatic summaries for each completed month.")
+      .addToggle((cb) => {
+        cb.setValue(this.plugin.settings.shouldEnableMonthlySummaries);
+        cb.onChange((value) => {
+          this.plugin.settings.shouldEnableMonthlySummaries = value;
+          this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Yearly Summaries")
+      .setDesc("Generate automatic summaries for each completed year.")
+      .addToggle((cb) => {
+        cb.setValue(this.plugin.settings.shouldEnableYearlySummaries);
+        cb.onChange((value) => {
+          this.plugin.settings.shouldEnableYearlySummaries = value;
+          this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(this.containerEl)
+      .setClass(SUMMARIZATION_SETTINGS_CLASS)
+      .setName("Recurring Summary Prompt")
+      .setDesc("Custom instructions for recurring summaries. For example: 'Focus on actionable insights.'")
+      .addTextArea((cb) => {
+        cb.inputEl.style.minWidth = "4rem";
+        cb.inputEl.style.maxWidth = "20rem";
+        cb.inputEl.rows = 3;
+
+        cb.setPlaceholder("Enter custom instructions for recurring summaries...");
+        cb.setValue(this.plugin.settings.recurringSummarySystemPrompt);
+        cb.onChange((value) => {
+          this.plugin.settings.recurringSummarySystemPrompt = value;
+          this.plugin.saveSettings();
+        });
+      });
   }
 
   addSelfHostLocation(): void {

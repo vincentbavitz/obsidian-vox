@@ -1,5 +1,6 @@
 import { FSWatcher, createReadStream } from "fs";
 import { readFile } from "fs/promises";
+import { DateTime } from "luxon";
 import VoxPlugin from "main";
 
 /**
@@ -15,6 +16,7 @@ export enum VoxStatusItemStatus {
   QUEUED = "QUEUED",
   PROCESSING_AUDIO = "PROCESSING_AUDIO",
   TRANSCRIBING = "TRANSCRIBING",
+  SUMMARIZING = "SUMMARIZING",
   COMPLETE = "COMPLETE",
   FAILED = "FAILED",
 }
@@ -124,3 +126,29 @@ export enum AudioOutputExtension {
   "MP3" = "mp3",
   "WAV" = "wav",
 }
+
+export enum RecurringSummaryPeriod {
+  WEEKLY = "WEEKLY",
+  MONTHLY = "MONTHLY",
+  YEARLY = "YEARLY",
+}
+
+export enum RecurringSummaryStatus {
+  PENDING = "PENDING",
+  GENERATING = "GENERATING",
+  COMPLETE = "COMPLETE",
+  FAILED = "FAILED",
+}
+
+export type RecurringSummaryItem = {
+  id: string;
+  period: RecurringSummaryPeriod;
+  label: string;
+  status: RecurringSummaryStatus;
+  startDate: DateTime;
+  endDate: DateTime;
+  addedAt: Date;
+  finalizedAt: Date | null;
+};
+
+export type RecurringSummaryMap = Record<string, RecurringSummaryItem>;

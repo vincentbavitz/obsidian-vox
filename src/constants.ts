@@ -6,9 +6,8 @@ export const CACHE_DIRECTORY = ".obsidian/.vox-cache";
 export const OBSIDIAN_VAULT_ID_HEADER_KEY = "obsidian-vault-id";
 export const OBSIDIAN_API_KEY_HEADER_KEY = "obsidian-vox-api-key";
 
-export const FILENAME_DATE_FORMAT = "yyyyMMdd-hh:mm";
-export const MARKDOWN_DATE_FORMAT = "yyyy-MM-dd hh:mm";
-export const GIT_COMMMIT_DATE_FORMAT = "yyyy-MM-dd hh:mm";
+export const FILENAME_DATE_FORMAT = "yyyyMMdd-HH:mm";
+export const MARKDOWN_DATE_FORMAT = "yyyy-MM-dd HH:mm";
 
 export const VALID_HOST_REGEX = new RegExp(
   "^http(s)?://[a-z0-9-]*.[a-z0-9-]*.?([a-z0-9-]*)?.?([a-z0-9-]*)?:[0-9]{2,6}$",
