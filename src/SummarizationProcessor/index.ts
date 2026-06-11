@@ -1,14 +1,92 @@
+import matter from "gray-matter";
 import { App, Notice, RequestUrlParam, requestUrl } from "obsidian";
 import { Settings } from "settings";
 import { Logger } from "utils/log";
 import { OBSIDIAN_API_KEY_HEADER_KEY, OBSIDIAN_VAULT_ID_HEADER_KEY } from "../constants";
-import matter from "gray-matter";
+
+export type TranscriptionInfo = {
+  title: string;
+  filePath: string;
+  recordedAt: string;
+};
 
 export class SummarizationProcessor {
-  constructor(private readonly app: App, private settings: Settings, private readonly logger: Logger) {}
+  constructor(
+    private readonly app: App,
+    private settings: Settings,
+    private readonly logger: Logger,
+  ) {}
 
   public updateSettings(settings: Settings) {
     this.settings = settings;
+  }
+
+  /**
+   * Get all transcriptions that haven't been summarized yet.
+   * Checks frontmatter 'summarized' flag first (source of truth), then falls back to file existence.
+   */
+  public async getUnsummarizedTranscriptions(): Promise<TranscriptionInfo[]> {
+    const unsummarized: TranscriptionInfo[] = [];
+
+    const markdownFiles = this.app.vault
+      .getMarkdownFiles()
+      .filter((f) => f.path.startsWith(this.settings.outputDirectory));
+
+    for (const file of markdownFiles) {
+      const raw = await this.app.vault.adapter.read(file.path);
+      const parsed = matter(raw);
+
+      // Only process transcriptions (not summaries)
+      if (parsed.data.type !== "transcribed") continue;
+
+      const title = (parsed.data.title as string) ?? file.basename;
+      const recordedAt = (parsed.data.recorded_at as string) ?? "Unknown";
+
+      // Check frontmatter flag first (source of truth)
+      const alreadySummarized = parsed.data.summarized === true;
+      if (alreadySummarized) continue;
+
+      // Fall back to checking if summary file exists (for backwards compatibility)
+      const summaryTitle = title.replace(/^TXC\s-\s/, "SUM - ");
+      const summaryPath = `${this.settings.summaryDirectory}/${summaryTitle}.md`;
+      const summaryExists = await this.app.vault.adapter.exists(summaryPath);
+
+      if (!summaryExists) {
+        unsummarized.push({
+          title,
+          filePath: file.path,
+          recordedAt,
+        });
+      }
+    }
+
+    // Sort by recorded_at descending (newest first)
+    return unsummarized.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  }
+
+  /**
+   * Summarize a transcription by its file path.
+   * Used for manual summarization of single notes.
+   */
+  public async summarizeTranscriptionByPath(transcriptionFilePath: string): Promise<boolean> {
+    try {
+      const raw = await this.app.vault.adapter.read(transcriptionFilePath);
+      const parsed = matter(raw);
+
+      const transcriptText = parsed.content.trim();
+      if (!transcriptText) {
+        new Notice("⚠️ Transcription file is empty");
+        return false;
+      }
+
+      await this.summarizeTranscription(transcriptText, transcriptionFilePath);
+      return true;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.log(`Failed to summarize by path: ${message}`);
+      new Notice(`⚠️ Failed to summarize: ${message}`);
+      return false;
+    }
   }
 
   /**
@@ -32,7 +110,7 @@ export class SummarizationProcessor {
 
       // Get the transcription file title from the markdown
       const tfile = this.app.vault.getAbstractFileByPath(transcriptionFilePath);
-      if (!tfile || tfile.type !== "file") {
+      if (!tfile) {
         throw new Error(`Transcription file not found: ${transcriptionFilePath}`);
       }
 
@@ -107,7 +185,11 @@ export class SummarizationProcessor {
     }
   }
 
-  private async writeSummaryFile(summaryTitle: string, summaryContent: string, transcriptionFilePath: string): Promise<string> {
+  private async writeSummaryFile(
+    summaryTitle: string,
+    summaryContent: string,
+    transcriptionFilePath: string,
+  ): Promise<string> {
     // Extract the transcription title from the file path for the header link
     const transcriptionTitleMatch = transcriptionFilePath.match(/\/([^/]+)\.md$/);
     const transcriptionFileName = transcriptionTitleMatch ? transcriptionTitleMatch[1] : "transcription";
@@ -140,11 +222,18 @@ export class SummarizationProcessor {
     // Read the existing transcription file
     const content = await this.app.vault.adapter.read(transcriptionFilePath);
 
-    // Append the summary backlink
-    const backlink = `\n\n---\n**Summary:** [[${summaryTitle}]]`;
-    const updatedContent = content + backlink;
+    // Parse the frontmatter to add the summarized flag
+    const parsed = matter(content);
+    parsed.data.summarized = true;
 
-    // Write back without re-parsing via gray-matter to avoid YAML corruption
+    // Append the summary backlink to the body
+    const backlink = `\n\n---\n**Summary:** [[${summaryTitle}]]`;
+    const updatedBody = parsed.content + backlink;
+
+    // Re-stringify with updated frontmatter
+    const updatedContent = matter.stringify(updatedBody, parsed.data);
+
+    // Write back
     await this.app.vault.adapter.write(transcriptionFilePath, updatedContent);
   }
 }

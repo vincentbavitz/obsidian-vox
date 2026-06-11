@@ -135,6 +135,7 @@ VOX automatically generates intelligent periodic summaries that synthesize all y
 
 ### Manual Summary Generation
 
+**Periodic Summaries:**
 Use Obsidian commands to manually generate summaries for any period:
 
 - `VOX: Generate Weekly Summary` — choose any completed week
@@ -142,6 +143,14 @@ Use Obsidian commands to manually generate summaries for any period:
 - `VOX: Generate Yearly Summary` — choose any completed year
 
 Each command opens a modal showing available periods with note counts and readiness status. Existing summaries prompt for confirmation before overwriting.
+
+**Individual Note Summaries:**
+Manually summarize individual transcriptions:
+
+- `VOX: Summarize a Note` — opens a modal listing all unsummarized transcriptions; select one to summarize immediately
+- `VOX: Summarize All Notes` — queues all unsummarized transcriptions for summarization in sequence
+
+These commands are useful if you prefer to manually control which notes get summarized, or if you want to catch up on a backlog of unsummarized transcriptions.
 
 ### Settings
 

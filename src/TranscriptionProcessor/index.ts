@@ -116,6 +116,84 @@ export class TranscriptionProcessor {
     this.notifySubscribers();
   }
 
+  public get getSummarizationProcessor() {
+    return this.summarizationProcessor;
+  }
+
+  /**
+   * Manually summarize a transcription by file path.
+   * Shows progress in VoxStatusView.
+   */
+  public async summarizeTranscriptionFile(transcriptionFilePath: string): Promise<void> {
+    try {
+      // Read the file to get details for status tracking
+      const raw = await this.app.vault.adapter.read(transcriptionFilePath);
+      const parsed = matter(raw);
+
+      const transcriptionTitle = (parsed.data.title as string) ?? "Transcription";
+      const transcriptText = parsed.content.trim();
+
+      if (!transcriptText) {
+        new Notice("⚠️ Transcription file is empty");
+        return;
+      }
+
+      // Create a synthetic hash for tracking in the UI (based on file path)
+      const hash = await sha1(new TextEncoder().encode(transcriptionFilePath));
+
+      // Add to state for visibility in VoxStatusView
+      this.setCanditateStatus(
+        {
+          name: transcriptionTitle.replace(/^TXC\s-\s/, ""),
+          filename: transcriptionFilePath.split("/").pop() ?? "note",
+          extension: "md",
+          directory: transcriptionFilePath.substring(0, transcriptionFilePath.lastIndexOf("/")),
+          filepath: transcriptionFilePath,
+          hash,
+          isTranscribed: true,
+        },
+        VoxStatusItemStatus.SUMMARIZING,
+      );
+
+      // Perform the summarization
+      await this.summarizationProcessor.summarizeTranscription(transcriptText, transcriptionFilePath);
+
+      // Mark as complete
+      this.setCanditateStatus(
+        {
+          name: transcriptionTitle.replace(/^TXC\s-\s/, ""),
+          filename: transcriptionFilePath.split("/").pop() ?? "note",
+          extension: "md",
+          directory: transcriptionFilePath.substring(0, transcriptionFilePath.lastIndexOf("/")),
+          filepath: transcriptionFilePath,
+          hash,
+          isTranscribed: true,
+        },
+        VoxStatusItemStatus.COMPLETE,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.log(`Manual summarization failed: ${message}`);
+      new Notice(`⚠️ Failed to summarize: ${message}`);
+    }
+  }
+
+  /**
+   * Batch summarize multiple transcription files.
+   * Queues them in sequence with progress tracking.
+   */
+  public async summarizeTranscriptionFiles(filePaths: string[]): Promise<void> {
+    if (filePaths.length === 0) return;
+
+    new Notice(`Queuing ${filePaths.length} transcription(s) for summarization...`);
+
+    for (const filePath of filePaths) {
+      await this.summarizeTranscriptionFile(filePath);
+    }
+
+    new Notice(`Summarization complete for ${filePaths.length} note(s)`);
+  }
+
   public reset(settings: Settings) {
     this.settings = settings;
     this.summarizationProcessor.updateSettings(settings);

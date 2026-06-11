@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from "obsidian";
 import { PeriodInfo } from "SummarizationScheduler";
+import { TranscriptionInfo } from "SummarizationProcessor";
 
 export class ConfirmModal extends Modal {
   constructor(app: App, private message: string, private onConfirm: () => void) {
@@ -104,6 +105,64 @@ export class SummarySelectorModal extends Modal {
           }
         });
       }
+    }
+  }
+}
+
+export class TranscriptionSelectorModal extends Modal {
+  constructor(
+    app: App,
+    private transcriptions: TranscriptionInfo[],
+    private onSelect: (filePath: string) => void,
+  ) {
+    super(app);
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+
+    contentEl.createEl("h2", { text: "Summarize a Transcription" });
+
+    if (this.transcriptions.length === 0) {
+      contentEl.createEl("p", { text: "All transcriptions have already been summarized!" });
+      return;
+    }
+
+    for (const transcription of this.transcriptions) {
+      const container = contentEl.createDiv({
+        cls: "transcription-item",
+        attr: {
+          style: `padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid var(--divider-color); border-radius: 4px; cursor: pointer;`,
+        },
+      });
+
+      const titleEl = container.createEl("div", {
+        text: transcription.title,
+        attr: {
+          style: `font-weight: 500; margin-bottom: 0.25rem;`,
+        },
+      });
+
+      const dateEl = container.createEl("small", {
+        text: `Recorded: ${transcription.recordedAt}`,
+        attr: {
+          style: `color: var(--text-faint); display: block;`,
+        },
+      });
+
+      container.addEventListener("click", () => {
+        this.onSelect(transcription.filePath);
+        this.close();
+      });
+
+      // Hover effect
+      container.addEventListener("mouseenter", () => {
+        container.style.backgroundColor = "var(--background-secondary)";
+      });
+
+      container.addEventListener("mouseleave", () => {
+        container.style.backgroundColor = "transparent";
+      });
     }
   }
 }

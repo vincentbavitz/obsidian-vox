@@ -1,12 +1,13 @@
 import AudioRecorder from "AudioRecorder";
+import matter from "gray-matter";
 import { debounce, Notice, Plugin, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { DEFAULT_SETTINGS, Settings, VoxSettingTab } from "settings";
 import { Logger } from "utils/log";
 import { VOX_RECORDER_VIEW, VoxRecorderViewRenderer } from "view/VoxRecorderViewRenderer";
 import { VOX_STATUS_VIEW, VoxStatusViewRenderer } from "view/VoxStatusViewRenderer";
 import { SummarySelectorModal } from "view/modals/SummarySelectorModal";
-import { TranscriptionProcessor } from "./TranscriptionProcessor";
 import { SummarizationScheduler } from "./SummarizationScheduler";
+import { TranscriptionProcessor } from "./TranscriptionProcessor";
 
 const WATCHER_DELAY_MS = 10_000;
 const HEALTH_CHECK_TIMEOUT_MS = 3000;
@@ -75,7 +76,7 @@ export default class VoxPlugin extends Plugin {
     // Add summarization commands
     this.addCommand({
       id: "vox-generate-weekly-summary",
-      name: "VOX: Generate Weekly Summary",
+      name: "Generate Weekly Summary",
       callback: async () => {
         const periods = await this.scheduler.getAvailableWeeklyPeriods();
         new SummarySelectorModal(this.app, periods, async (id) => {
@@ -86,7 +87,7 @@ export default class VoxPlugin extends Plugin {
 
     this.addCommand({
       id: "vox-generate-monthly-summary",
-      name: "VOX: Generate Monthly Summary",
+      name: "Generate Monthly Summary",
       callback: async () => {
         const periods = await this.scheduler.getAvailableMonthlyPeriods();
         new SummarySelectorModal(this.app, periods, async (id) => {
@@ -97,12 +98,52 @@ export default class VoxPlugin extends Plugin {
 
     this.addCommand({
       id: "vox-generate-yearly-summary",
-      name: "VOX: Generate Yearly Summary",
+      name: "Generate Yearly Summary",
       callback: async () => {
         const periods = await this.scheduler.getAvailableYearlyPeriods();
         new SummarySelectorModal(this.app, periods, async (id) => {
           await this.scheduler.generateYearlySummary(id);
         }).open();
+      },
+    });
+
+    // Single transcription summarization command
+    this.addCommand({
+      id: "vox-generate-single-summary",
+      name: "Summarize This Note",
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+          new Notice("No file is currently active.");
+          return;
+        }
+
+        const raw = await this.app.vault.adapter.read(file.path);
+        const parsed = matter(raw);
+
+        // Check frontmatter flag first (source of truth)
+        const alreadySummarized = parsed.data.summarized === true;
+
+        if (alreadySummarized) {
+          new Notice("This note has already been summarized.");
+          return;
+        }
+
+        await this.processor.summarizeTranscriptionFile(file.path);
+      },
+    });
+
+    // Batch summarization command
+    this.addCommand({
+      id: "vox-generate-all-summaries",
+      name: "Summarize All Notes",
+      callback: async () => {
+        const unsummarized = await this.processor.getSummarizationProcessor.getUnsummarizedTranscriptions();
+        if (unsummarized.length === 0) {
+          new Notice("All transcriptions have already been summarized!");
+          return;
+        }
+        await this.processor.summarizeTranscriptionFiles(unsummarized.map((t) => t.filePath));
       },
     });
   }
